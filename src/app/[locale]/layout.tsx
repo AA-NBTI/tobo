@@ -43,27 +43,20 @@ export default async function RootLayout({
   const messages = await getMessages();
 
   return (
-    <html
-      lang={locale}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-gray-50 pb-16 sm:pb-0">
-        <PHProvider>
-          <AnalyticsProvider>
-            <NextIntlClientProvider messages={messages}>
-              <ActivePersonaProvider>
-                <Header />
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Suspense fallback={null}>
-                  <ToastProvider />
-                </Suspense>
-              </ActivePersonaProvider>
-            </NextIntlClientProvider>
-          </AnalyticsProvider>
-        </PHProvider>
-      </body>
-    </html>
+    <PHProvider>
+      <AnalyticsProvider>
+        <NextIntlClientProvider messages={messages}>
+          <ActivePersonaProvider>
+            <Header />
+            <main className="flex-1">
+              {children}
+            </main>
+            <Suspense fallback={null}>
+              <ToastProvider />
+            </Suspense>
+          </ActivePersonaProvider>
+        </NextIntlClientProvider>
+      </AnalyticsProvider>
+    </PHProvider>
   );
 }

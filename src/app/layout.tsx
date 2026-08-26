@@ -1,11 +1,19 @@
+import type { Metadata } from 'next'
 import './globals.css'
 
-// 루트 layout은 html/body를 렌더링하지 않음
-// [locale]/layout.tsx가 html/body를 담당 (Hydration mismatch 방지)
+export const metadata: Metadata = {
+  title: 'toboai.com - AI 예약 관리',
+  description: 'AI 기반 스마트 예약 관리 서비스',
+}
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return children
+  return (
+    <html>
+      <body>{children}</body>
+    </html>
+  )
 }
