@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 리뷰 등록 및 AI 점주 자동 답글 생성
+// 리뷰 등록 및 AI 점주 자동 답글 생성 (실제 방문 예약자 검증)
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { businessId, reservationId, authorName, rating, content, userId } = body
+    const { businessId, reservationId, customerPhone, authorName, rating, content, userId } = body
 
     if (!businessId || !authorName || !content || !rating) {
       return NextResponse.json({ error: '필수 항목이 누락되었습니다.' }, { status: 400 })
@@ -48,7 +48,60 @@ export async function POST(req: NextRequest) {
 
     const admin = getAdmin()
 
-    // 1. 업체 정보 및 점주 봇 정보 조회
+    // 1. 실제 방문 예약 검증 (고객 연락처 또는 reservationId 기반)
+    let verifiedReservationId: string | null = reservationId || null
+    let isVerified = false
+
+    if (reservationId) {
+      // 1-1. 고유 예약 ID로 직접 검증
+      const { data: res } = await admin
+        .from('reservations')
+        .select('id, business_id, status, review_id, customer_name, customer_phone')
+        .eq('id', reservationId)
+        .eq('business_id', businessId)
+        .maybeSingle()
+
+      if (!res) {
+        return NextResponse.json({ error: '유효하지 않은 예약 정보입니다.' }, { status: 400 })
+      }
+      if (res.review_id) {
+        return NextResponse.json({ error: '이미 후기가 작성된 예약건입니다.' }, { status: 400 })
+      }
+      isVerified = true
+      verifiedReservationId = res.id
+    } else if (customerPhone) {
+      // 1-2. 고객 휴대폰 번호(또는 뒷 4자리/전체) + 이름으로 최근 완료된 예약 조회
+      const cleanPhone = customerPhone.replace(/[^0-9]/g, '')
+      
+      const { data: matchedRes } = await admin
+        .from('reservations')
+        .select('id, customer_phone, customer_name, status, review_id')
+        .eq('business_id', businessId)
+        .is('review_id', null)
+        .order('created_at', { ascending: false })
+
+      const validRes = (matchedRes || []).find(r => {
+        const rPhone = (r.customer_phone || '').replace(/[^0-9]/g, '')
+        const matchPhone = rPhone === cleanPhone || (cleanPhone.length >= 4 && rPhone.endsWith(cleanPhone))
+        const matchName = r.customer_name?.trim() === authorName?.trim()
+        return matchPhone && matchName
+      })
+
+      if (!validRes) {
+        return NextResponse.json({ 
+          error: '일치하는 방문 완료 예약 내역을 찾을 수 없습니다. 예약자 이름과 연락처를 확인해주세요.' 
+        }, { status: 400 })
+      }
+
+      isVerified = true
+      verifiedReservationId = validRes.id
+    } else {
+      return NextResponse.json({ 
+        error: '신뢰할 수 있는 리뷰를 위해 예약 시 사용하신 연락처(또는 예약번호)가 필요합니다.' 
+      }, { status: 400 })
+    }
+
+    // 2. 업체 정보 및 점주 봇 정보 조회
     const { data: business } = await admin
       .from('businesses')
       .select('name, category, description, accounts!businesses_owner_id_fkey(display_name, ai_model_provider, persona_prompt)')
@@ -88,7 +141,7 @@ export async function POST(req: NextRequest) {
       .from('reviews')
       .insert({
         business_id: businessId,
-        reservation_id: reservationId || null,
+        reservation_id: verifiedReservationId,
         user_id: userId || null,
         author_name: authorName,
         rating: Number(rating),
@@ -102,12 +155,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // 4. 예약 정보가 연결되어 있으면 reservation 상태 갱신
-    if (reservationId) {
+    // 4. 예약 정보와 연결 및 review_id 업데이트 (중복 방지)
+    if (verifiedReservationId) {
       await admin
         .from('reservations')
         .update({ review_id: newReview.id })
-        .eq('id', reservationId)
+        .eq('id', verifiedReservationId)
     }
 
     return NextResponse.json({ success: true, review: newReview })
