@@ -1,3 +1,4 @@
+'use me'
 import type { Config } from "tailwindcss";
 
 export default {
