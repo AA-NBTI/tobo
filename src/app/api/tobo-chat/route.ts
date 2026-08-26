@@ -55,7 +55,19 @@ ${JSON.stringify(context, null, 2)}
 
     const aiPrompt = `${systemPrompt}\n\n[고객의 최근 메시지]: "${message || '추천 시작'}"\n\n토보의 능동적 리드 답변:`
 
-    const aiReply = await generateEnforcedAIContent(aiPrompt, 'gemma-4-31b-it')
+    let aiReply = ''
+    try {
+      aiReply = await generateEnforcedAIContent(aiPrompt, 'gemini-2.5-flash-lite')
+    } catch (aiErr) {
+      console.warn('⚠️ [Tobo Chat] AI LLM 응답 실패, 능동형 룰베이스 폴백 전환:', aiErr)
+      if (step === 1) {
+        aiReply = `반갑습니다! 고객님께 딱 맞는 맞춤 매장을 찾기 위해 제가 먼저 몇 가지 질문을 드릴게요.\n원하시는 지역과 시간대를 선택해 주시면 가장 적합한 곳으로 안내해 드립니다.`
+      } else if (step === 2) {
+        aiReply = `좋습니다! 방문하시는 목적과 분위기를 선택해 주시면 최종 매장을 좁혀드리겠습니다.`
+      } else {
+        aiReply = `고객님의 선호 조건을 바탕으로 가장 적합한 실시간 제휴 매장 리스트를 안내해 드립니다. 마음에 드는 곳의 전담 봇과 바로 예약해 보세요!`
+      }
+    }
 
     // 3. 단계별 인터랙티브 질문 퀵 카드 데이터 생성
     let nextStep = step + 1
