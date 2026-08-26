@@ -52,38 +52,36 @@ export default function HeaderControls({ user, profile, hasAdmin, t }: { user: a
           <label htmlFor="mobile-menu" className="sm:hidden p-2 text-gray-600 cursor-pointer hover:bg-gray-100 rounded-lg">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </label>
-          <input type="checkbox" id="mobile-menu" className="hidden peer" />
-
-          <div className="hidden peer-checked:flex sm:flex flex-col sm:flex-row absolute sm:static top-16 left-0 w-full sm:w-auto bg-white sm:bg-transparent border-b sm:border-none p-4 sm:p-0 gap-3 sm:gap-4 shadow-md sm:shadow-none z-40 items-start sm:items-center text-sm font-medium">
-            <Link onClick={closeMenu} href={`/users/${user.id}`} className="flex items-center gap-2 text-gray-700 font-medium hover:underline w-full sm:w-auto p-2 sm:p-0">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover border" />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-200 border flex items-center justify-center text-xs text-gray-400">?</div>
-              )}
-              <span>{profile?.display_name}</span>
-            </Link>
-
-            {hasAdmin ? (
-              <>
-                <Link onClick={closeMenu} href="/admin/users" className={`w-full sm:w-auto flex items-center transition font-medium px-3.5 py-1.5 rounded-lg text-xs sm:text-sm ${currentPath.includes('/admin/users') ? 'bg-gray-800 text-white' : 'text-gray-700 hover:text-black bg-gray-100 hover:bg-gray-200'}`}>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {hasAdmin && (
+              <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+                <Link 
+                  href="/admin/users" 
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${currentPath.includes('/admin/users') ? 'bg-[#0f172a] text-white shadow-xs' : 'text-gray-600 hover:text-black hover:bg-gray-200/60'}`}
+                >
                   휴먼
                 </Link>
-                <Link onClick={closeMenu} href="/admin/robot" className={`w-full sm:w-auto flex items-center transition font-medium px-3.5 py-1.5 rounded-lg text-xs sm:text-sm ${currentPath.includes('/admin/robot') ? 'bg-gray-800 text-white' : 'text-gray-700 hover:text-black bg-gray-100 hover:bg-gray-200'}`}>
+                <Link 
+                  href="/admin/robot" 
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${currentPath.includes('/admin/robot') ? 'bg-[#0f172a] text-white shadow-xs' : 'text-gray-600 hover:text-black hover:bg-gray-200/60'}`}
+                >
                   로봇
                 </Link>
-                <Link onClick={closeMenu} href="/admin/content" className={`w-full sm:w-auto flex items-center transition font-medium px-3.5 py-1.5 rounded-lg text-xs sm:text-sm ${currentPath.includes('/admin/content') ? 'bg-gray-800 text-white' : 'text-gray-700 hover:text-black bg-gray-100 hover:bg-gray-200'}`}>
+                <Link 
+                  href="/admin/content" 
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${currentPath.includes('/admin/content') ? 'bg-[#0f172a] text-white shadow-xs' : 'text-gray-600 hover:text-black hover:bg-gray-200/60'}`}
+                >
                   컨텐츠
                 </Link>
-                <Link onClick={closeMenu} href="/admin" className={`w-full sm:w-auto flex items-center transition font-medium px-3.5 py-1.5 rounded-lg text-xs sm:text-sm ${pathname === '/admin' || pathname === '/ko/admin' ? 'bg-gray-800 text-white' : 'text-gray-700 hover:text-black bg-gray-100 hover:bg-gray-200'}`}>
+                <Link 
+                  href="/admin" 
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${pathname === '/admin' || pathname === '/ko/admin' ? 'bg-[#0f172a] text-white shadow-xs' : 'text-gray-600 hover:text-black hover:bg-gray-200/60'}`}
+                >
                   설정
                 </Link>
-              </>
-            ) : (
-              <Link onClick={closeMenu} href="/settings" className="w-full sm:w-auto flex items-center text-gray-700 hover:text-black transition font-medium px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg">
-                {t.settings}
-              </Link>
+              </div>
             )}
+          </div>
             <div className="w-full sm:w-auto">
               <button 
                 onClick={async () => {
