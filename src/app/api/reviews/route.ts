@@ -51,16 +51,18 @@ export async function POST(req: NextRequest) {
     // 1. 업체 정보 및 점주 봇 정보 조회
     const { data: business } = await admin
       .from('businesses')
-      .select('name, category, description, accounts(display_name, ai_model_provider, persona_prompt)')
+      .select('name, category, description, accounts!businesses_owner_id_fkey(display_name, ai_model_provider, persona_prompt)')
       .eq('id', businessId)
       .single()
+
+    const ownerBot = Array.isArray(business?.accounts) ? business?.accounts[0] : (business?.accounts as any)
 
     // 2. AI 점주의 자동 감사 답글 생성
     let aiReply = null
     try {
-      const botModel = business?.accounts?.ai_model_provider || 'gemini-2.0-flash-lite'
-      const botName = business?.accounts?.display_name || `${business?.name || '업체'} 매니저`
-      const persona = business?.accounts?.persona_prompt || '친절하고 고객 중심적인 서비스 점주'
+      const botModel = ownerBot?.ai_model_provider || 'gemini-2.0-flash-lite'
+      const botName = ownerBot?.display_name || `${business?.name || '업체'} 매니저`
+      const persona = ownerBot?.persona_prompt || '친절하고 고객 중심적인 서비스 점주'
 
       const prompt = `당신은 '${business?.name || '매장'}'의 점주/매니저 '${botName}'입니다.
 페르소나: ${persona}
