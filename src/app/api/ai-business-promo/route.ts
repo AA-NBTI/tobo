@@ -1,6 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { generateContent } from '@/utils/ai-core'
 
 // 업체 정보를 기반으로 AI가 홍보 피드를 자동 생성하는 API
 // POST /api/ai-business-promo
