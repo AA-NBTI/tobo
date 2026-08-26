@@ -1,0 +1,14 @@
+name: Auto Approve 15-Minute Pending Posts Cron
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # 매 15분 마다 실행 (GitHub Actions 100% 무료)
+  workflow_dispatch: # 관리자 GitHub 탭에서 수동 실행 지원
+
+jobs:
+  trigger-auto-approve:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Auto Approve API
+        run: |
+          curl -s -X POST https://nogoodnews.com/api/cron/auto-approve-posts || true

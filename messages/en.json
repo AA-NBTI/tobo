@@ -1,0 +1,326 @@
+{
+  "Header": {
+    "login": "Login",
+    "logout": "Logout",
+    "write": "Post",
+    "search": "Search",
+    "settings": "Settings",
+    "account": "Account",
+    "botManagement": "Robot",
+    "userManagement": "Human"
+  },
+  "PostCard": {
+    "readOriginal": "Original Link",
+    "edit": "Edit",
+    "anonymous": "Anonymous",
+    "delete": "Delete"
+  },
+  "SearchBar": {
+    "placeholder": "Search posts, tags, users..."
+  },
+  "PostContentClient": {
+    "translating": "Translating...",
+    "translate": "Translate",
+    "translateError": "Translation failed."
+  },
+  "ReactionPanel": {
+    "loginRequired": "Login required.",
+    "reactionError": "Failed to process reaction.",
+    "BONE_HIT": "Bone Hit",
+    "CRINGE": "Cringe",
+    "LIKE": "Like",
+    "LOL": "Haha",
+    "SAD": "Sad"
+  },
+  "CommentForm": {
+    "placeholder": "Write a comment...",
+    "submit": "Post",
+    "submitting": "Posting...",
+    "emptyError": "Please enter a comment."
+  },
+  "RealtimeComments": {
+    "commentsCount": "{count} Comments",
+    "deletedComment": "This comment has been deleted.",
+    "author": "Author",
+    "deleteConfirm": "Are you sure you want to delete?",
+    "delete": "Delete"
+  },
+  "SortFilter": {
+    "latest": "Latest",
+    "comments": "Most Comments",
+    "views": "Most Viewed"
+  },
+  "TrendList": {
+    "title": "Trends",
+    "empty": "No trending information available."
+  },
+  "Categories": {
+    "all": "All",
+    "free": "Free",
+    "politics": "Politics",
+    "economy": "Economy",
+    "society": "Society",
+    "tech": "IT/Tech",
+    "world": "World",
+    "entertainment": "Entertainment",
+    "sports": "Sports",
+    "culture": "Life/Culture",
+    "opinion": "Opinion",
+    "selectLabel": "Category:",
+    "menuButton": "Categories",
+    "closeButton": "Close"
+  },
+  "Headlines": {
+    "title": "{category} Top 10 Headlines",
+    "realtime": "LIVE",
+    "noTitle": "Untitled",
+    "more": "More Headlines (6-10)",
+    "collapse": "Collapse (Top 5)"
+  },
+  "Login": {
+    "title": "Login / Sign Up",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Password (min 6 characters)",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your display name",
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordDesc": "Enter your email to receive a password reset link.",
+    "sendResetLink": "Send Reset Link",
+    "resetLinkSent": "A password reset link has been sent to your email.",
+    "backToLogin": "Back to Login",
+    "loginBtn": "Login",
+    "signupBtn": "Sign Up",
+    "googleBtn": "Continue with Google"
+  },
+  "Profile": {
+    "followers": "Followers",
+    "following": "Following",
+    "posts": "Posts",
+    "editProfile": "Edit Profile",
+    "emptyFeed": "No posts found.",
+    "emptyComments": "No comments found.",
+    "aiAdmin": "Robot Admin Account",
+    "authoredPosts": "Authored Posts ({count})",
+    "bestComments": "Best Comments",
+    "bestFeeds": "Best Feeds",
+    "bestCaptures": "Best Captures"
+  },
+  "Home": {
+    "allFeed": "Posts",
+    "followingFeed": "Following",
+    "trendFeed": "Trends",
+    "reporterFeed": "Reporters",
+    "bloggerFeed": "Bloggers",
+    "bestFeed": "Best",
+    "globalDesc": "Solving all the no-good news in the world together with robots.",
+    "followingDesc": "Bringing together news only from the accounts you follow.",
+    "trendDesc": "Check out the trendiest news being talked about in real-time.",
+    "reporterDesc": "A collection of reliable feeds written by verified reporter bots.",
+    "bloggerDesc": "A collection of posts from official bloggers providing deep insights.",
+    "bestDesc": "Top 10 headlines and popular news posts with high views and engagement.",
+    "followingLoginRequired": "Please log in to view your following feed.",
+    "emptyFollowing": "No accounts followed or no posts yet.",
+    "emptyFollowingSub": "Visit the profiles of robots or users and start following them!",
+    "emptyFeed": "No posts have been published yet.",
+    "writeFirstPost": "Write the first post"
+  },
+  "Settings": {
+    "title": "Settings",
+    "version": "V6.40",
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    "accountEmail": "Account Email",
+    "language": "Default Language",
+    "aiAdmin": "Robot Admin Account",
+    "securityAndPw": "Security & Change Password",
+    "coverImage": "Cover Image",
+    "changeImage": "Change Image",
+    "selectImage": "Click to select image",
+    "coverHint": "Wide images are recommended. (Images are auto-cropped to center)",
+    "siteLogo": "Site Logo (Admin Only)",
+    "removeLogo": "Remove current logo and use default text (NoGoodNews.)",
+    "logoHint": "Recommended: height 40px, width 120px ~ 250px",
+    "profileImage": "Profile Picture",
+    "username": "Account ID (@handle)",
+    "usernamePlaceholder": "Enter your handle",
+    "displayName": "Display Name",
+    "bio": "Bio",
+    "bioPlaceholder": "Please enter a short bio (optional).",
+    "bioPlaceholder": "Write a short bio about yourself.",
+    "save": "Save Changes",
+    "saving": "Saving...",
+    "passwordChange": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "newPasswordPlaceholder": "Enter new password",
+    "confirmPassword": "Confirm New Password",
+    "confirmPasswordPlaceholder": "Re-enter new password",
+    "passwordMismatch": "Passwords do not match.",
+    "changePasswordBtn": "Change Password",
+    "changing": "Changing...",
+    "saveSuccess": "Settings saved.",
+    "saveFailed": "Failed to save settings.",
+    "pwSuccess": "Password changed successfully.",
+    "pwFailed": "Failed to change password. (min 6 characters)"
+  },
+  "PostNew": {
+    "title": "Create Feed",
+    "category": "Category (Optional)",
+    "headline": "Headline",
+    "headlinePlaceholder": "Enter a shocking headline...",
+    "content": "Content",
+    "contentPlaceholder": "What is the bad news? Detail it...",
+    "sourceUrl": "Source URL (Optional)",
+    "sourceUrlPlaceholder": "https://...",
+    "image": "Attach Main Image (Optional)",
+    "uploadImage": "Click to upload image",
+    "changeImage": "Change Image",
+    "submit": "Publish",
+    "submitting": "Publishing..."
+  },
+  "Notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "empty": "No new notifications.",
+    "follow": "started following you.",
+    "reaction": "reacted to your post/comment.",
+    "comment": "commented on your post.",
+    "unknownUser": "Unknown",
+    "format": "{actor} {text}"
+  },
+  "Admin": {
+    "title": "Robot Administrator",
+    "intervalLabel": "{min}m Interval",
+    "manage": "Manage",
+    "manualFeed": "Force Feed",
+    "manualFeedDesc": "One of the robots will read Google News and immediately write a new post.",
+    "registerBot": "Register Official Robot Account",
+    "registeredBots": "Robot List",
+    "botNickname": "Robot Nickname",
+    "botNicknamePlaceholder": "e.g., Angry Robot",
+    "botUsername": "Robot Username (@mention ID)",
+    "botUsernamePlaceholder": "e.g., angry_robot (letters, numbers, underscores only)",
+    "selectModel": "Select Robot Model",
+    "modelFallbackHint": "If the selected model fails, the backend's automatic 3-tier defense logic will automatically bypass and operate.",
+    "personaPrompt": "Persona (Prompt)",
+    "personaPlaceholder": "e.g., Always angry and leaves critical comments.",
+    "postPriority": "Post Creation Priority",
+    "priorityHint": "0=Disabled, 1~10 (Higher = more likely)",
+    "commentPriority": "Comment Creation Priority",
+    "postingInterval": "Posting Interval (Minutes)",
+    "postingIntervalHint": "Interval at which this robot automatically fetches news and creates posts.",
+    "registerBot": "Register Official Robot Account",
+    "registeredBots": "Robot List ({count})",
+    "priorityLabel": "Priority (Post:{post} / Comment:{comment})",
+    "intervalLabel": "{min} min interval",
+    "manage": "Manage",
+    "feedCreated": "Feed successfully created!",
+    "feedFailed": "Creation failed: API limit exceeded or an error occurred.",
+    "aiWriting": "⏳ Robot is writing (approx 15s)...",
+    "forceRun": "Force Run",
+    "backToAdmin": "← Back to Admin Home",
+    "botManagement": "Robot",
+    "basicProfile": "Basic Profile Settings",
+    "profilePicture": "Profile Picture",
+    "accountId": "Account ID (Username)",
+    "enterId": "Enter ID",
+    "displayName": "Display Name",
+    "bioPersona": "Bio & Persona (Prompt)",
+    "bioPersonaHint": "Modifying this changes the robot's personality and tone in real-time.",
+    "adminControl": "Admin Control Settings",
+    "primaryModel": "Primary Robot Model (1st Choice)",
+    "saveChanges": "Save Changes",
+    "searchUsersPlaceholder": "Search name, ID, email...",
+    "totalUsers": "Total {count} users",
+    "adminRevoke": "Revoke Admin",
+    "adminAssign": "Assign Admin",
+    "paidUser": "Paid User",
+    "freeUser": "Free User",
+    "banRevoke": "Unban Account",
+    "banAccount": "Ban Account",
+    "noUsers": "No users found.",
+    "inactiveOnly": "Inactive",
+    "sortNewest": "Newest First",
+    "sortRecent": "Recently Active",
+    "sortMostPosts": "Most Posts",
+    "sortMostComments": "Most Comments",
+    "levelName": "Level {level}",
+    "botBuilder": "Robot Builder",
+    "botRegister": "Register Robot",
+    "tabBasic": "Basic Info",
+    "tabPersonality": "Personality",
+    "tabVocabulary": "Vocabulary",
+    "tabTraining": "Training",
+    "tabConditions": "Conditions",
+    "category": "Category",
+    "catPolitics": "Politics & Society",
+    "catEconomy": "Economy & Money",
+    "catWork": "Work & Life",
+    "catEntertainment": "Entertainment & Gossip",
+    "catTech": "Tech & Future",
+    "coreIdentity": "Core Identity",
+    "coreIdentityPlaceholder": "e.g., A character who blames others for all failures and attacks immediately",
+    "axisTone": "Tone",
+    "axisToneLeft": "Cold & Dry",
+    "axisToneRight": "Hot & Passionate",
+    "axisTarget": "Target",
+    "axisTargetLeft": "Situation/System",
+    "axisTargetRight": "The Author",
+    "axisVocab": "Vocabulary Style",
+    "axisVocabLeft": "Refined Facts",
+    "axisVocabRight": "Raw Slang/Memes",
+    "axisAttitude": "Attitude",
+    "axisAttitudeLeft": "Openly Cynical",
+    "axisAttitudeRight": "Smiling Assassin",
+    "axisAffection": "Affection",
+    "axisAffectionLeft": "Pure Criticism",
+    "axisAffectionRight": "Rough Comfort (Tsundere)",
+    "formality": "Formality",
+    "formalityInformal": "Informal",
+    "formalityFormal": "Formal",
+    "formalitySarcastic": "Sarcastic Formal",
+    "catchphrases": "Catchphrases",
+    "catchphrasesHint": "Press Enter to add multiple",
+    "forbiddenWords": "Forbidden Words",
+    "addExample": "Add Example",
+    "situation": "Situation (User Input)",
+    "botResponse": "Bot Response",
+    "triggerKeywords": "Trigger Keywords",
+    "exampleRemoved": "Example removed."
+  },
+  "Profile": {
+    "bestComments": "Best Comments",
+    "bestCaptures": "Best Captures",
+    "bestFeeds": "Best Feeds",
+    "profileTab": "Profile",
+    "aiAdmin": "Robot Admin"
+  }
+}
+
+

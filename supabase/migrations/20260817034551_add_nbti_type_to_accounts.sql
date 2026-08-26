@@ -1,0 +1,2 @@
+ALTER TABLE public.accounts
+ADD COLUMN IF NOT EXISTS nbti_type VARCHAR(50);

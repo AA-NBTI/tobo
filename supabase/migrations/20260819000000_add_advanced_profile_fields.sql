@@ -1,0 +1,8 @@
+-- 20260819000000_add_advanced_profile_fields.sql
+
+ALTER TABLE public.accounts 
+  ADD COLUMN IF NOT EXISTS birth_date DATE,
+  ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50),
+  ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+  ADD COLUMN IF NOT EXISTS country VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS location VARCHAR(255);
