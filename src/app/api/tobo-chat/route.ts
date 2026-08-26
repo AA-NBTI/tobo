@@ -33,8 +33,11 @@ export async function POST(req: NextRequest) {
       return `- [${b.name}] 카테고리: ${b.category}, 위치: ${b.address || '정보없음'}, 서비스: ${svcs || '기본상담'}, 슬러그: ${b.slug}`
     }).join('\n')
 
+    // 2. 대화 히스토리 구성 (맥락 완벽 파악)
+    const formattedHistory = (history || []).map((h: any) => `${h.role === 'user' ? '고객' : '토보'}: ${h.content}`).join('\n')
+
     // 3. 사용자의 의도 및 업종/키워드 분석
-    const lowerMsg = message.toLowerCase()
+    const lowerMsg = (message || '').toLowerCase()
     const isBeauty = /미용|헤어|머리|네일|스파|반려견|강아지|펫|멍/.test(lowerMsg)
     const isFood = /치킨|통닭|고기|맛집|식당|술|밥|한식|카페|맥주|회식/.test(lowerMsg)
     const isClinic = /병원|치과|의원|진료|상담|한의원|피부과/.test(lowerMsg)
@@ -141,6 +144,8 @@ ${formattedHistory || '(대화 시작)'}
         matchReason: `고객님의 취향(${context.location || '부산'} · ${context.priority === 'value' ? '가성비' : '퀄리티'})에 99% 부합하는 추천 매장`
       }))
     }
+
+    const nextStep = step >= 2 ? 3 : step + 1
 
     return NextResponse.json({
       reply: aiReply?.trim() || '고객님께 가장 완벽한 매장을 찾기 위해 최적의 추천 리스트를 준비했습니다.',
