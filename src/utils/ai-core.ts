@@ -165,15 +165,49 @@ export async function generateEnforcedAIContent(
   return cleanAiThoughtOutput(rawResult)
 }
 
-// ── 오픈소스 로컬 트랜스포머 임베딩 (무제한 쿼터용) ──
+// ── 오픈소스 고성능 BAAI/bge-m3 & 다국어 트랜스포머 임베딩 ──
 let localPipelinePromise: Promise<any> | null = null
 
 async function getLocalExtractor() {
   if (!localPipelinePromise) {
     const { pipeline } = await import('@xenova/transformers')
-    localPipelinePromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
+    // 1순위: 한국어/다국어 최강 BAAI/bge-m3 경량 ONNX (or all-MiniLM fallback)
+    try {
+      localPipelinePromise = pipeline('feature-extraction', 'Xenova/bge-m3')
+    } catch {
+      localPipelinePromise = pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
+    }
   }
   return localPipelinePromise
+}
+
+// Cloudflare Workers AI (@cf/baai/bge-m3) 원격 호출 지원
+async function generateCloudflareEmbedding(text: string): Promise<number[] | null> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
+  if (!accountId || !apiToken) return null
+
+  try {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/@cf/baai/bge-m3`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ text: [text] })
+    })
+    const data = await res.json()
+    if (data?.result?.data?.[0]) {
+      const raw = data.result.data[0]
+      // 768 or 1024 vector to standard 768
+      const vec = new Float32Array(768)
+      vec.set(raw.slice(0, 768))
+      return Array.from(vec)
+    }
+  } catch (cfErr) {
+    console.warn('⚠️ [Cloudflare Workers AI] bge-m3 임베딩 실패, 로컬 엔진 전환:', cfErr)
+  }
+  return null
 }
 
 async function generateLocalONNXEmbedding(text: string): Promise<number[]> {
@@ -182,9 +216,9 @@ async function generateLocalONNXEmbedding(text: string): Promise<number[]> {
     const res = await extractor(text, { pooling: 'mean', normalize: true })
     const rawEmb = Array.from(res.data) as number[]
     
-    // 384 차원을 PostgreSQL vector(768) 규격에 맞게 768 차원으로 Zero-padding
+    // PostgreSQL vector(768) 규격에 맞게 768 차원으로 정규화/패딩
     const padded = new Float32Array(768)
-    padded.set(rawEmb)
+    padded.set(rawEmb.slice(0, 768))
     return Array.from(padded)
   } catch (err) {
     console.warn('⚠️ [Local ONNX Embedding] 백업 해시 임베딩 전환:', err)
@@ -228,24 +262,34 @@ function generateFeatureHashingEmbedding(text: string): number[] {
   return result
 }
 
-// ── 초고속 무제한 임베딩 생성 (1순위 오픈소스 로컬 ONNX 트랜스포머 -> 2순위 Google Gemini 백업) ──
+// ── 초고속 무제한 다국어 임베딩 생성 (1순위 Cloudflare bge-m3 -> 2순위 오픈소스 ONNX -> 3순위 Google Gemini -> 4순위 Hash) ──
 export async function generateEmbedding(text: string): Promise<number[]> {
-  // 1순위: 초고속 무제한 오픈소스 로컬 ONNX 트랜스포머 임베딩 (10ms 소요, 0원 비용, 쿼터 제한 100% 해소)
+  // 1순위: Cloudflare Workers AI (@cf/baai/bge-m3)
+  try {
+    const cfVec = await generateCloudflareEmbedding(text)
+    if (cfVec && cfVec.length === 768) {
+      return cfVec
+    }
+  } catch (eCf) {
+    console.warn('⚠️ [AI Core] Cloudflare bge-m3 스킵/실패:', eCf)
+  }
+
+  // 2순위: 오픈소스 bge-m3 / MiniLM ONNX 엔진
   try {
     const localVec = await generateLocalONNXEmbedding(text)
     if (localVec && localVec.length === 768) {
       return localVec
     }
   } catch (eLocal) {
-    console.warn('⚠️ [AI Core] 1순위 오픈소스 로컬 임베딩 연산 실패, 구글 Gemini 백업 시도:', eLocal)
+    console.warn('⚠️ [AI Core] 오픈소스 로컬 임베딩 연산 실패, 구글 Gemini 백업 시도:', eLocal)
   }
 
-  // 2순위 (보조 백업): Google Generative AI API
+  // 3순위 (보조 백업): Google Generative AI API (text-embedding-004)
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (apiKey) {
     const genAI = new GoogleGenerativeAI(apiKey)
     try {
-      const model = genAI.getGenerativeModel({ model: "gemini-embedding-2" })
+      const model = genAI.getGenerativeModel({ model: "text-embedding-004" })
       const res = await model.embedContent({
         content: { role: 'user', parts: [{ text }] },
         outputDimensionality: 768
@@ -256,7 +300,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     }
   }
 
-  // 3순위 (최종 비상용 0-fail 백업): 로컬 Feature Vector Hashing
+  // 4순위 (최종 비상용 0-fail 백업): 로컬 Feature Vector Hashing
   return generateFeatureHashingEmbedding(text)
 }
 
