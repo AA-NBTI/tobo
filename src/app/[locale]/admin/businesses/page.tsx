@@ -5,9 +5,14 @@ import { getBusinesses } from './actions'
 import BusinessesClient from './BusinessesClient'
 import pkg from '../../../../../package.json'
 
+import { setRequestLocale } from 'next-intl/server'
+
 export const dynamic = 'force-dynamic'
 
-export default async function BusinessesPage() {
+export default async function BusinessesPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
+  if (locale) setRequestLocale(locale)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !isAdmin(user)) redirect('/')

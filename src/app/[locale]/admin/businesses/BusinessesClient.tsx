@@ -120,7 +120,7 @@ export default function BusinessesClient({ initialData }: { initialData: any[] }
                     서비스 관리 →
                   </a>
                   <a
-                    href={`/b/${b.slug}`}
+                    href={`/b/${encodeURIComponent(b.slug || b.id)}`}
                     target="_blank"
                     className="px-3 py-1.5 text-xs bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100 transition font-medium"
                   >

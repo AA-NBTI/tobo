@@ -12,11 +12,10 @@ export default function middleware(request: NextRequest) {
   if (pathname.startsWith('/b/')) {
     return NextResponse.next();
   }
-  
 
   return intlMiddleware(request);
 }
  
 export const config = {
-  matcher: ['/((?!api|auth|b|_next|_vercel|.*\\..*).*)', '/b/:path*']
+  matcher: ['/((?!api|auth|b|_next|_vercel|.*\\..*).*)']
 };

@@ -9,13 +9,27 @@ async function getBusinessBySlug(slug: string) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
-  const { data } = await admin
+  const decodedSlug = decodeURIComponent(slug)
+  
+  // 1. slug로 먼저 조회
+  const { data: bySlug } = await admin
     .from('businesses')
     .select('*, services(*)')
-    .eq('slug', slug)
+    .eq('slug', decodedSlug)
     .eq('is_active', true)
-    .single()
-  return data
+    .maybeSingle()
+
+  if (bySlug) return bySlug
+
+  // 2. id로 조회 (fallback)
+  const { data: byId } = await admin
+    .from('businesses')
+    .select('*, services(*)')
+    .eq('id', decodedSlug)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  return byId
 }
 
 const CATEGORY_LABELS: Record<string, string> = {

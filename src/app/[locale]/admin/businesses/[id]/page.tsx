@@ -5,14 +5,18 @@ import { getBusiness } from '../actions'
 import ServiceManagerClient from './ServiceManagerClient'
 import PromoTriggerButton from './PromoTriggerButton'
 
+import { setRequestLocale } from 'next-intl/server'
+
 export const dynamic = 'force-dynamic'
 
-export default async function BusinessDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function BusinessDetailPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+  const { id, locale } = await params
+  if (locale) setRequestLocale(locale)
+
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || !isAdmin(user)) redirect('/')
 
-  const { id } = await params
   const business = await getBusiness(id)
   if (!business) notFound()
 
