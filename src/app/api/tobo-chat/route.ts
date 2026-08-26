@@ -82,7 +82,7 @@ ${formattedHistory || '(대화 시작)'}
 
     let aiReply = ''
     try {
-      aiReply = await generateEnforcedAIContent(aiPrompt, 'gemini-3.6-flash')
+      aiReply = await generateEnforcedAIContent(aiPrompt, 'gemma-4-31b-it')
     } catch (aiErr) {
       console.warn('⚠️ [Tobo Chat] AI LLM 에러:', aiErr)
       aiReply = `반갑습니다! 저는 고객님 주변의 미용실, 뷰티샵, 맛집 등 로컬 매장 맞춤 추천과 실시간 예약을 전문으로 돕는 AI 토보입니다. 오늘 어떤 서비스를 도와드릴까요?`
