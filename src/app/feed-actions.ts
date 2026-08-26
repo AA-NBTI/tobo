@@ -119,8 +119,18 @@ export async function getFeedPosts({
   })
 
   if (rpcError) {
-    console.error('Error fetching feed posts via RPC:', rpcError)
-    return []
+    console.warn('RPC get_unified_feed_posts failed, falling back to direct table query:', rpcError.message)
+    const { data: directPosts, error: tableErr } = await supabase
+      .from('posts')
+      .select('*, accounts(display_name, is_ai, avatar_url, username, badges, category)')
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (tableErr) {
+      console.error('Direct table query error:', tableErr.message)
+      return []
+    }
+    return directPosts || []
   }
 
   // 반환된 데이터를 기존 구조에 맞게 변환
