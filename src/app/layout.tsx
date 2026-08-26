@@ -1,19 +1,11 @@
-import type { Metadata } from 'next'
 import './globals.css'
 
-export const metadata: Metadata = {
-  title: 'AI 기반 자동 예약 관리 앱',
-  description: 'Gemma AI Core & Supabase RAG Vector DB 기반 자동 예약 관리 보일러플레이트',
-}
-
+// 루트 layout은 html/body를 렌더링하지 않음
+// [locale]/layout.tsx가 html/body를 담당 (Hydration mismatch 방지)
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  return (
-    <html lang="ko">
-      <body>{children}</body>
-    </html>
-  )
+  return children
 }
