@@ -50,7 +50,7 @@ export default async function BusinessPublicPage({ params }: { params: Promise<{
   const activeServices = (business.services || []).filter((s: any) => s.is_active)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 pb-32">
       {/* 커버 영역 */}
       <div className="relative h-48 sm:h-64 bg-gradient-to-br from-indigo-500 to-purple-600 overflow-hidden">
         {business.cover_url && (

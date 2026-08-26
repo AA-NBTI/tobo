@@ -21,15 +21,28 @@ export async function getBusinesses() {
   return data || []
 }
 
-// 업체 단건
+// 업체 단건 (서비스 + 리뷰 목록 포함)
 export async function getBusiness(id: string) {
   const admin = getAdmin()
   const { data } = await admin
     .from('businesses')
-    .select('*, services(*)')
+    .select('*, services(*), reviews(*)')
     .eq('id', id)
     .single()
   return data
+}
+
+// 점주의 수동 후기 답글 등록/수정
+export async function updateReviewReply(reviewId: string, businessId: string, replyText: string) {
+  const admin = getAdmin()
+  const { error } = await admin
+    .from('reviews')
+    .update({ ai_reply: replyText })
+    .eq('id', reviewId)
+
+  if (error) throw new Error(error.message)
+  revalidatePath(`/ko/admin/businesses/${businessId}`)
+  revalidatePath(`/shop/${businessId}`)
 }
 
 // 업체 생성

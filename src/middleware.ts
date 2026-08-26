@@ -8,8 +8,8 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // /b/ 경로는 locale 처리 없이 바로 통과 (업체 공개 페이지)
-  if (pathname.startsWith('/b/')) {
+  // /shop/ 경로는 locale 처리 없이 바로 통과 (업체 공개 페이지)
+  if (pathname.startsWith('/shop/')) {
     return NextResponse.next();
   }
 
@@ -17,5 +17,5 @@ export default function middleware(request: NextRequest) {
 }
  
 export const config = {
-  matcher: ['/((?!api|auth|b|_next|_vercel|.*\\..*).*)']
+  matcher: ['/((?!api|auth|shop|_next|_vercel|.*\\..*).*)']
 };
