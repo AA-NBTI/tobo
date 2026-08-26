@@ -675,18 +675,23 @@ export async function getRankingStats() {
     throw new Error('Unauthorized')
   }
 
-  const { data: accounts, error } = await supabaseAdmin
-    .from('accounts')
-    .select('id, display_name, is_ai, level, activity_score, avatar_url, type_code, axis_profile')
-    .order('activity_score', { ascending: false })
-    .limit(100)
+  try {
+    const { data: accounts, error } = await supabaseAdmin
+      .from('accounts')
+      .select('id, display_name, is_ai, level, activity_score, avatar_url, type_code')
+      .order('activity_score', { ascending: false })
+      .limit(100)
 
-  if (error) {
-    console.error('Failed to fetch ranking stats:', error)
-    throw new Error('Failed to fetch ranking stats: ' + error.message)
+    if (error) {
+      console.warn('Failed to fetch ranking stats:', error.message)
+      return []
+    }
+
+    return accounts || []
+  } catch (err: any) {
+    console.warn('Ranking stats exception:', err.message)
+    return []
   }
-
-  return accounts || []
 }
 
 export async function updateSystemPrompts(formData: FormData) {
