@@ -35,8 +35,9 @@ export default function NotificationBell({ userId }: { userId: string }) {
     fetchNotifications()
 
     // 2. Realtime subscription
+    const channelName = `notifications_${userId}_${Math.random().toString(36).slice(2, 9)}`
     const channel = supabase
-      .channel(`notifications_${userId}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
@@ -46,30 +47,24 @@ export default function NotificationBell({ userId }: { userId: string }) {
           filter: `recipient_id=eq.${userId}`
         },
         (payload) => {
-          console.log('[Realtime Notification] payload received:', payload)
-          // Fetch only the actor to avoid race conditions with the newly inserted notification
           supabase
             .from('accounts')
             .select('display_name, avatar_url')
             .eq('id', payload.new.actor_id)
             .single()
             .then(({ data, error }) => {
-              console.log('[Realtime Notification] fetched actor:', data, error)
               const newNotification = {
                 ...payload.new,
                 actor: data || null
               }
               setNotifications(prev => {
-                // Prevent duplicate insertions
                 if (prev.some(n => n.id === payload.new.id)) return prev;
                 return [newNotification, ...prev].slice(0, 20)
               })
             })
         }
       )
-      .subscribe((status) => {
-        console.log('[Realtime Notification] Subscription status:', status)
-      })
+      .subscribe()
 
     return () => {
       supabase.removeChannel(channel)
