@@ -126,7 +126,7 @@ ${historyText}
           bot_id: botId,
           customer_name: customerName,
           customer_phone: customerPhone,
-          reservation_time: new Date(resTime).isValid ? new Date(resTime).toISOString() : new Date().toISOString(),
+          reservation_time: !isNaN(new Date(resTime).getTime()) ? new Date(resTime).toISOString() : new Date().toISOString(),
           party_size: partySize,
           status: 'confirmed',
           notes: `1:1 AI 상담을 통해 자동 예약 확정됨`
