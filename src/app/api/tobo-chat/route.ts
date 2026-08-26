@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
-import { generateEnforcedAIContent } from '@/utils/ai-core'
+import { generateEnforcedAIContent, generateEmbedding } from '@/utils/ai-core'
 
 function getAdmin() {
   return createClient(
@@ -21,7 +21,17 @@ export async function POST(req: NextRequest) {
 
     const admin = getAdmin()
 
-    // 1. 등록된 모든 활성 매장 및 서비스 데이터 조회
+    // 1. 사용자 메시지 임베딩 생성 (노굿뉴스 bge-m3 벡터 엔진 가동)
+    let userQueryEmbedding: number[] | null = null
+    try {
+      if (message) {
+        userQueryEmbedding = await generateEmbedding(message)
+      }
+    } catch (embErr) {
+      console.warn('⚠️ [Tobo Chat] 임베딩 생성 오류:', embErr)
+    }
+
+    // 2. 등록된 모든 활성 매장 및 서비스 데이터 조회
     const { data: businesses } = await admin
       .from('businesses')
       .select('id, name, category, address, phone, slug, description, services(id, name, price, duration_minutes)')
@@ -33,7 +43,7 @@ export async function POST(req: NextRequest) {
       return `- [${b.name}] 카테고리: ${b.category}, 위치: ${b.address || '정보없음'}, 서비스: ${svcs || '기본상담'}, 슬러그: ${b.slug}`
     }).join('\n')
 
-    // 2. 대화 히스토리 구성 (맥락 완벽 파악)
+    // 3. 대화 히스토리 구성 (맥락 완벽 파악)
     const formattedHistory = (history || []).map((h: any) => `${h.role === 'user' ? '고객' : '토보'}: ${h.content}`).join('\n')
 
     // 3. 사용자의 의도 및 업종/키워드 분석
@@ -80,7 +90,7 @@ ${formattedHistory || '(대화 시작)'}
       }
     }
 
-    // 5. 상황에 맞는 동적 인터랙티브 퀵 카드 생성
+    // 5. 상황에 맞는 동적 인터랙티브 퀵 카드 생성 (컬러 이모지 완전 배제, 정갈한 텍스트 칩)
     let cards: any = null
     let recommendationList: any[] = []
 
@@ -88,13 +98,13 @@ ${formattedHistory || '(대화 시작)'}
       // 1단계: 위치 & 가치 기준 카드
       cards = {
         type: 'step1_location_value',
-        title: '📍 지역과 우선순위를 선택해 주세요',
+        title: '지역과 우선순위를 선택해 주세요',
         options: [
-          { label: '📍 사하구 하단/당리', value: { location: '사하구' } },
-          { label: '📍 부산 강서구 명지', value: { location: '강서구' } },
-          { label: '⏰ 오늘 저녁 바로 방문', value: { timing: 'today' } },
-          { label: '💰 가성비 & 넉넉한 양', value: { priority: 'value' } },
-          { label: '✨ 조용하고 퀄리티 좋은 곳', value: { priority: 'quality' } },
+          { label: '사하구 하단/당리', value: { location: '사하구' } },
+          { label: '부산 강서구 명지', value: { location: '강서구' } },
+          { label: '오늘 저녁 바로 방문', value: { timing: 'today' } },
+          { label: '가성비 & 넉넉한 구성', value: { priority: 'value' } },
+          { label: '조용하고 퀄리티 높은 곳', value: { priority: 'quality' } },
         ]
       }
     } else if (step === 2) {
@@ -102,32 +112,32 @@ ${formattedHistory || '(대화 시작)'}
       if (isFood || context.category === 'restaurant') {
         cards = {
           type: 'step2_food',
-          title: '🍗 누구와 어떤 분위기로 즐기시나요?',
+          title: '동행 및 선호 스타일을 선택해 주세요',
           options: [
-            { label: '🍺 친구/지인과 생맥주 한잔', value: { vibe: 'friends_beer' } },
-            { label: '🍗 바삭한 가마솥/후라이드', value: { menu: 'crispy' } },
-            { label: '🔥 매콤 숯불/양념 바베큐', value: { menu: 'spicy_bbq' } },
-            { label: '🚪 조용한 프라이빗 룸/테라스', value: { vibe: 'private' } },
+            { label: '친구/지인과 생맥주 한잔', value: { vibe: 'friends_beer' } },
+            { label: '바삭한 가마솥/후라이드', value: { menu: 'crispy' } },
+            { label: '매콤 숯불/양념 바베큐', value: { menu: 'spicy_bbq' } },
+            { label: '조용한 프라이빗 룸/테라스', value: { vibe: 'private' } },
           ]
         }
       } else if (isBeauty || context.category === 'beauty') {
         cards = {
           type: 'step2_beauty',
-          title: '💇 희망하시는 서비스 스타일을 선택해 주세요',
+          title: '희망하시는 서비스 스타일을 선택해 주세요',
           options: [
-            { label: '✂️ 1인 단독 스트레스 프리 케어', value: { style: 'private_care' } },
-            { label: '🛁 프리미엄 탄산 스파 & 목욕', value: { style: 'spa' } },
-            { label: '✂️ 전체 가위컷 / 스타일링', value: { style: 'scissor_cut' } },
+            { label: '1인 단독 스트레스 프리 케어', value: { style: 'private_care' } },
+            { label: '프리미엄 탄산 스파 & 목욕', value: { style: 'spa' } },
+            { label: '전체 가위컷 / 스타일링', value: { style: 'scissor_cut' } },
           ]
         }
       } else {
         cards = {
           type: 'step2_general',
-          title: '👥 방문 목적과 인원을 알려주세요',
+          title: '방문 목적과 인원을 알려주세요',
           options: [
-            { label: '👤 1인 혼밥/혼술/단독이용', value: { party: '1' } },
-            { label: '👥 2~3인 소규모 모임', value: { party: '2-3' } },
-            { label: '👨‍👩‍👧 가족 외식 / 단체 예약', value: { party: 'group' } },
+            { label: '1인 단독 이용', value: { party: '1' } },
+            { label: '2~3인 소규모 모임', value: { party: '2-3' } },
+            { label: '가족 외식 / 단체 예약', value: { party: 'group' } },
           ]
         }
       }
