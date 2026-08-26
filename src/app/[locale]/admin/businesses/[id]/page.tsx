@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { isAdmin } from '@/utils/auth'
 import { getBusiness } from '../actions'
 import ServiceManagerClient from './ServiceManagerClient'
+import PromoTriggerButton from './PromoTriggerButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,6 +34,17 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
         >
           공개 페이지 보기 →
         </a>
+      </div>
+
+      {/* AI 홍보 피드 생성 */}
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-5 mb-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-base font-bold text-purple-800">🤖 AI 홍보 피드 생성</h2>
+            <p className="text-xs text-purple-600 mt-1">AI가 이 업체의 서비스를 분석해 SNS 홍보 게시글을 자동으로 작성합니다.</p>
+          </div>
+          <PromoTriggerButton businessId={id} businessName={business.name} />
+        </div>
       </div>
 
       {/* 서비스 관리 */}
