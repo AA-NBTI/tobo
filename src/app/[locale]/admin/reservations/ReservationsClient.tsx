@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useTransition } from 'react'
 import { updateReservationStatus, deleteReservation, sendAiReviewRequest } from './actions'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
