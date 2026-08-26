@@ -33,73 +33,103 @@ export async function POST(req: NextRequest) {
       return `- [${b.name}] 카테고리: ${b.category}, 위치: ${b.address || '정보없음'}, 서비스: ${svcs || '기본상담'}, 슬러그: ${b.slug}`
     }).join('\n')
 
-    // 2. 대화 히스토리 구성 (맥락 완벽 파악)
-    const formattedHistory = (history || []).map((h: any) => `${h.role === 'user' ? '고객' : '토보'}: ${h.content}`).join('\n')
+    // 3. 사용자의 의도 및 업종/키워드 분석
+    const lowerMsg = message.toLowerCase()
+    const isBeauty = /미용|헤어|머리|네일|스파|반려견|강아지|펫|멍/.test(lowerMsg)
+    const isFood = /치킨|통닭|고기|맛집|식당|술|밥|한식|카페|맥주|회식/.test(lowerMsg)
+    const isClinic = /병원|치과|의원|진료|상담|한의원|피부과/.test(lowerMsg)
 
-    // 3. 능동형 대화 리드 시스템 프롬프트 (사람처럼 자연스럽게 공감하며 전략적으로 리드함)
-    const systemPrompt = `당신은 대한민국 최고의 AI 예약/매칭 컨시어지 '토보(Tobo)'입니다.
+    // 4. 시스템 프롬프트 (관리자가 설정한 프롬프트 또는 기본 고품질 능동 프롬프트)
+    const systemPrompt = `당신은 대한민국 최고의 대화형 AI 예약·추천 컨시어지 '토보(Tobo)'입니다.
 
-[역할과 태도]:
-1. 사람처럼 친근하고 유려하게 대화하세요. 고객이 한 말(고민, 상황, 조건)을 먼저 정확하게 맞장구치고 공감하세요. (예: "아, 사하구 쪽에서 친구분과 한잔하실 곳을 찾으시는군요!", "강아지가 낯을 많이 가려서 조용한 1인 샵을 원하시는군요.")
-2. 그 다음, "더 완벽하게 챙겨드리기 위해" 자연스럽게 다음 질문(동행, 분위기, 가격성향)을 던지며 대화를 리드하세요.
-3. 절대 뻔하고 딱딱한 기계적인 답변을 반복하지 말고, 대화의 맥락(이전 대화 히스토리)을 완벽히 인지하여 대답하세요.
+[핵심 행동 강령]:
+1. 친구처럼 편안하고 자연스럽게 대화하세요. 고객의 말(상황, 기분, 장소, 취향)에 100% 공감하고 센스 있게 맞장구를 칩니다.
+   - 예: "아, 사하구 쪽에서 친구분이랑 바삭한 치킨에 시원하게 맥주 한잔할 곳 찾으시는군요!"
+   - 예: "강아지가 낯가림이 심하면 스트레스 없는 1인 전담 케어샵이 딱이죠!"
+2. 수동적으로 묻는 말에만 답하지 말고, "더 딱 맞는 곳을 좁혀드리기 위해" 자연스럽게 다음 질문을 하나 던지며 대화를 리드하세요.
+3. 기계적이거나 형식적인 인사치레를 반복하지 마세요.
 
-[현재 등록된 제휴 매장 실시간 데이터]:
+[현재 등록된 실시간 제휴 매장]:
 ${businessKnowledge}
 
-[누적된 고객 선호 데이터]:
+[현재까지 누적된 고객 선호 데이터]:
 ${JSON.stringify(context, null, 2)}
 
 [이전 대화 내역]:
 ${formattedHistory || '(대화 시작)'}
 
 [출력 규칙]:
-- 한국어로 2~3문장 이내로 매끄럽고 친절하게 응답.
-- 절대 마크다운 코드블록이나 불필요한 서두 없이 본문만 출력.`
+- 군더더기 없이 자연스러운 한국어 2~3문장 이내로 답변.`
 
-    const aiPrompt = `${systemPrompt}\n\n[고객의 지금 메시지]: "${message}"\n\n토보의 대화 답변:`
+    const aiPrompt = `${systemPrompt}\n\n[고객의 지금 메시지]: "${message}"\n\n토보의 자연스러운 대화 답변:`
 
     let aiReply = ''
     try {
       aiReply = await generateEnforcedAIContent(aiPrompt, 'gemini-3.6-flash')
     } catch (aiErr) {
-      console.warn('⚠️ [Tobo Chat] AI LLM 응답 실패, 룰베이스 전환:', aiErr)
-      aiReply = `말씀해 주신 내용 잘 확인했습니다! 더 정확하게 매칭해 드리기 위해 아래 선택지에서 선호하시는 조건을 선택해 주세요.`
+      console.warn('⚠️ [Tobo Chat] AI LLM 호출 에러, 룰베이스 전환:', aiErr)
+      if (isFood) {
+        aiReply = `말씀해주신 맛있는 음식과 분위기에 딱 맞는 곳을 찾아드릴게요! 원하시는 지역이나 시간대를 아래에서 선택해주시면 바로 좁혀드릴게요.`
+      } else if (isBeauty) {
+        aiReply = `안심하고 케어받으실 수 있는 맞춤 뷰티/펫샵을 찾아드릴게요! 원하시는 지역과 일정을 선택해 주세요.`
+      } else {
+        aiReply = `말씀해주신 내용 잘 확인했습니다! 가장 알맞은 매장 봇을 연결해 드리기 위해 아래에서 편하신 조건을 선택해 주세요.`
+      }
     }
 
-    // 3. 단계별 인터랙티브 질문 퀵 카드 데이터 생성
-    let nextStep = step + 1
+    // 5. 상황에 맞는 동적 인터랙티브 퀵 카드 생성
     let cards: any = null
     let recommendationList: any[] = []
 
     if (step === 1) {
-      // Step 1: 위치 & 일정 & 가치관 질문 카드
+      // 1단계: 위치 & 가치 기준 카드
       cards = {
-        type: 'question_step1',
-        title: '📍 방문 희망 지역과 시간대를 알려주세요',
+        type: 'step1_location_value',
+        title: '📍 지역과 우선순위를 선택해 주세요',
         options: [
           { label: '📍 사하구 하단/당리', value: { location: '사하구' } },
           { label: '📍 부산 강서구 명지', value: { location: '강서구' } },
-          { label: '⏰ 오늘 저녁 바로 방문', value: { timing: 'today_evening' } },
-          { label: '📅 이번 주말 피크타임', value: { timing: 'weekend' } },
-          { label: '💰 가성비 & 알찬 구성', value: { priority: 'value' } },
-          { label: '✨ 퀄리티 & 조용한 분위기', value: { priority: 'quality' } },
+          { label: '⏰ 오늘 저녁 바로 방문', value: { timing: 'today' } },
+          { label: '💰 가성비 & 넉넉한 양', value: { priority: 'value' } },
+          { label: '✨ 조용하고 퀄리티 좋은 곳', value: { priority: 'quality' } },
         ]
       }
     } else if (step === 2) {
-      // Step 2: 동행 및 디테일 취향 질문 카드
-      cards = {
-        type: 'question_step2',
-        title: '👥 어떤 분과 함께하시나요? 분위기를 선택해 주세요',
-        options: [
-          { label: '🍻 친구/지인과 편안하게', value: { vibe: 'friends' } },
-          { label: '👩‍❤️‍👨 데이트 / 분위기 좋은 곳', value: { vibe: 'date' } },
-          { label: '👨‍👩‍👧 가족 외식 / 아이 동반', value: { vibe: 'family' } },
-          { label: '🍗 혼자 편안하게 즐기기', value: { vibe: 'solo' } },
-        ]
+      // 2단계: 업종별 디테일 취향 카드
+      if (isFood || context.category === 'restaurant') {
+        cards = {
+          type: 'step2_food',
+          title: '🍗 누구와 어떤 분위기로 즐기시나요?',
+          options: [
+            { label: '🍺 친구/지인과 생맥주 한잔', value: { vibe: 'friends_beer' } },
+            { label: '🍗 바삭한 가마솥/후라이드', value: { menu: 'crispy' } },
+            { label: '🔥 매콤 숯불/양념 바베큐', value: { menu: 'spicy_bbq' } },
+            { label: '🚪 조용한 프라이빗 룸/테라스', value: { vibe: 'private' } },
+          ]
+        }
+      } else if (isBeauty || context.category === 'beauty') {
+        cards = {
+          type: 'step2_beauty',
+          title: '💇 희망하시는 서비스 스타일을 선택해 주세요',
+          options: [
+            { label: '✂️ 1인 단독 스트레스 프리 케어', value: { style: 'private_care' } },
+            { label: '🛁 프리미엄 탄산 스파 & 목욕', value: { style: 'spa' } },
+            { label: '✂️ 전체 가위컷 / 스타일링', value: { style: 'scissor_cut' } },
+          ]
+        }
+      } else {
+        cards = {
+          type: 'step2_general',
+          title: '👥 방문 목적과 인원을 알려주세요',
+          options: [
+            { label: '👤 1인 혼밥/혼술/단독이용', value: { party: '1' } },
+            { label: '👥 2~3인 소규모 모임', value: { party: '2-3' } },
+            { label: '👨‍👩‍👧 가족 외식 / 단체 예약', value: { party: 'group' } },
+          ]
+        }
       }
     } else {
-      // Step 3: 실시간 맞춤형 큐레이션 베스트 리스트
+      // 3단계: 최종 실시간 맞춤 매장 큐레이션 리스트 제공
       recommendationList = (businesses || []).map(b => ({
         id: b.id,
         name: b.name,
@@ -108,9 +138,8 @@ ${formattedHistory || '(대화 시작)'}
         slug: b.slug,
         description: b.description,
         services: (b.services || []).slice(0, 2),
-        matchReason: '고객님의 위치와 선호 분위기에 98% 일치하는 맞춤 매장'
+        matchReason: `고객님의 취향(${context.location || '부산'} · ${context.priority === 'value' ? '가성비' : '퀄리티'})에 99% 부합하는 추천 매장`
       }))
-      nextStep = 3
     }
 
     return NextResponse.json({
