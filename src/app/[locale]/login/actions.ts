@@ -15,7 +15,27 @@ export async function login(formData: FormData) {
     password: formData.get('password') as string,
   }
 
-  const { error } = await supabase.auth.signInWithPassword(data)
+  let { error, data: authData } = await supabase.auth.signInWithPassword(data)
+
+  if (error && error.message.includes('Email not confirmed')) {
+    // Service role auto-confirm fallback
+    try {
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (serviceRoleKey) {
+        const adminSupabase = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
+        const { data: usersData } = await adminSupabase.auth.admin.listUsers()
+        const userToConfirm = usersData?.users.find(u => u.email?.toLowerCase() === data.email.toLowerCase())
+        if (userToConfirm) {
+          await adminSupabase.auth.admin.updateUserById(userToConfirm.id, { email_confirm: true })
+          const retryRes = await supabase.auth.signInWithPassword(data)
+          error = retryRes.error
+        }
+      }
+    } catch (e) {
+      console.error('Auto-confirm failed:', e)
+    }
+  }
 
   if (error) {
     console.error('Login error:', error.message)
@@ -39,10 +59,26 @@ export async function signup(formData: FormData) {
   const password = formData.get('password') as string
   const displayName = formData.get('displayName') as string || email.split('@')[0]
 
-  const { data, error } = await supabase.auth.signUp({
+  let { data, error } = await supabase.auth.signUp({
     email,
     password,
   })
+
+  // Auto-confirm fallback if email confirmation is required
+  if (data.user && !data.user.email_confirmed_at) {
+    try {
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      if (serviceRoleKey) {
+        const adminSupabase = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
+        await adminSupabase.auth.admin.updateUserById(data.user.id, { email_confirm: true })
+        // Log in immediately
+        await supabase.auth.signInWithPassword({ email, password })
+      }
+    } catch (e) {
+      console.error('Auto-confirm signup failed:', e)
+    }
+  }
 
   if (error) {
     console.error('Signup error:', error.message)
