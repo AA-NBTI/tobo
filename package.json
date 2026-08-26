@@ -1,6 +1,6 @@
 {
-  "name": "nn-nogoodnews",
-  "version": "9.11.0",
+  "name": "toboai",
+  "version": "1.02.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
