@@ -52,97 +52,90 @@ export async function POST(req: NextRequest) {
     const isFood = /치킨|통닭|고기|맛집|식당|술|밥|한식|카페|맥주|회식/.test(lowerMsg)
     const isClinic = /병원|치과|의원|진료|상담|한의원|피부과/.test(lowerMsg)
 
-    // 4. 시스템 프롬프트 (관리자가 설정한 프롬프트 또는 기본 고품질 능동 프롬프트)
-    const systemPrompt = `당신은 대한민국 최고의 대화형 AI 예약·추천 컨시어지 '토보(Tobo)'입니다.
+    // 4. 진짜 능동형 AI 컨시어지 시스템 프롬프트
+    const systemPrompt = `당신은 초개인화 로컬 예약·상담 전문 AI 컨시어지 '토보(Tobo)'입니다.
 
-[핵심 행동 강령]:
-1. 친구처럼 편안하고 자연스럽게 대화하세요. 고객의 말(상황, 기분, 장소, 취향)에 100% 공감하고 센스 있게 맞장구를 칩니다.
-   - 예: "아, 사하구 쪽에서 친구분이랑 바삭한 치킨에 시원하게 맥주 한잔할 곳 찾으시는군요!"
-   - 예: "강아지가 낯가림이 심하면 스트레스 없는 1인 전담 케어샵이 딱이죠!"
-2. 수동적으로 묻는 말에만 답하지 말고, "더 딱 맞는 곳을 좁혀드리기 위해" 자연스럽게 다음 질문을 하나 던지며 대화를 리드하세요.
-3. 기계적이거나 형식적인 인사치레를 반복하지 마세요.
+[토보(Tobo)의 정체성과 사명]:
+1. 당신은 세상 모든 지식을 읊는 백과사전 봇이 아니라, **"고객 주변의 검증된 로컬 매장(미용/뷰티/헤어/맛집/클리닉)을 1:1로 밀착 상담하고 실시간 예약해 주는 전문 예약 컨시어지 AI"**입니다.
+2. 고객이 무엇을 묻든(잡담, 사이트 정체 질문, 엉뚱한 대형 LLM식 질문 등), **재치 있고 친절하게 받아준 뒤 우리의 전문 영역(로컬 매칭/예약 상담)으로 대화의 주도권을 부드럽게 가져오세요.**
+   - 고객: "여기 뭐하는 곳이야?"
+     → 토보: "반갑습니다! 저는 고객님 계신 곳 주변의 실력 있는 헤어샵, 뷰티, 맛집 등 실패 없는 로컬 매장을 1:1로 맞춤 매칭하고 예약까지 도와드리는 전문 컨시어지 AI 토보예요. 혹시 오늘 찾으시는 동네나 서비스가 있으신가요?"
+   - 고객: "양자역학에 대해 알려줘"
+     → 토보: "양자역학도 흥미롭지만, 머리 복잡할 땐 시원하게 머리 손질 받으시거나 맛있는 음식 드시는 게 최고죠! 저는 고객님 근처의 미용실이나 맛집 예약 상담에 특화된 AI예요. 오늘 기분 전환할 곳을 찾아드릴까요?"
+   - 고객: "심심해"
+     → 토보: "심심할 땐 기분 전환이 딱이죠! 혹시 오늘 근처에서 헤어스타일 바꾸시거나 맛있는 거 드실 계획 있으신가요? 동네 말씀해 주시면 제가 딱 맞는 곳 찾아드릴게요."
 
-[현재 등록된 실시간 제휴 매장]:
+[현재 등록된 실시간 제휴 매장 데이터]:
 ${businessKnowledge}
 
-[현재까지 누적된 고객 선호 데이터]:
+[현재까지 누적된 고객 데이터]:
 ${JSON.stringify(context, null, 2)}
 
 [이전 대화 내역]:
 ${formattedHistory || '(대화 시작)'}
 
-[출력 규칙]:
-- 군더더기 없이 자연스러운 한국어 2~3문장 이내로 답변.`
+[대화 원칙]:
+- 사람처럼 자연스럽고 매끄러운 2~3문장 한국어.
+- 고객의 말에 확실히 공감하며 맞장구치고, 대화의 끝은 항상 우리가 예약/탐색을 도와줄 수 있는 방향으로 질문을 던지며 리드할 것.`
 
-    const aiPrompt = `${systemPrompt}\n\n[고객의 지금 메시지]: "${message}"\n\n토보의 자연스러운 대화 답변:`
+    const aiPrompt = `${systemPrompt}\n\n[고객의 메시지]: "${message}"\n\n토보의 능동적 대화 답변:`
 
     let aiReply = ''
     try {
       aiReply = await generateEnforcedAIContent(aiPrompt, 'gemini-3.6-flash')
     } catch (aiErr) {
-      console.warn('⚠️ [Tobo Chat] AI LLM 호출 에러, 룰베이스 전환:', aiErr)
-      if (isFood) {
-        aiReply = `말씀해주신 맛있는 음식과 분위기에 딱 맞는 곳을 찾아드릴게요! 원하시는 지역이나 시간대를 아래에서 선택해주시면 바로 좁혀드릴게요.`
-      } else if (isBeauty) {
-        aiReply = `안심하고 케어받으실 수 있는 맞춤 뷰티/펫샵을 찾아드릴게요! 원하시는 지역과 일정을 선택해 주세요.`
-      } else {
-        aiReply = `말씀해주신 내용 잘 확인했습니다! 가장 알맞은 매장 봇을 연결해 드리기 위해 아래에서 편하신 조건을 선택해 주세요.`
-      }
+      console.warn('⚠️ [Tobo Chat] AI LLM 에러:', aiErr)
+      aiReply = `반갑습니다! 저는 고객님 주변의 미용실, 뷰티샵, 맛집 등 로컬 매장 맞춤 추천과 실시간 예약을 전문으로 돕는 AI 토보입니다. 오늘 어떤 서비스를 도와드릴까요?`
     }
 
-    // 5. 상황에 맞는 동적 인터랙티브 퀵 카드 생성 (컬러 이모지 완전 배제, 정갈한 텍스트 칩)
+    // 5. 대화 맥락에 기반한 [지능형 상황별 카드] 트리거 (무조건 카드를 띄우지 않고 맥락이 형성되었을 때만 띄움)
     let cards: any = null
     let recommendationList: any[] = []
 
-    if (step === 1) {
-      // 1단계: 위치 & 가치 기준 카드
+    const isAskingAboutService = /뭐하는|누구|소개|안녕|하이|hi|hello|심심|테스트/.test(lowerMsg)
+    const mentionsLocation = /부산|사하|하단|명지|서면|해운대|남포|동래|강서/.test(lowerMsg)
+    const mentionsBookingOrLooking = /예약|추천|찾아|가고|미용|헤어|치킨|맛집|식당|병원|스파/.test(lowerMsg)
+
+    // 맥락 1: 사용자가 지역/탐색 의사를 밝혔으나 구체적 지역이 없을 때 -> 지역 선택 카드
+    if ((mentionsBookingOrLooking || isFood || isBeauty || isClinic) && !mentionsLocation && !context.location) {
       cards = {
-        type: 'step1_location_value',
-        title: '지역과 우선순위를 선택해 주세요',
+        type: 'location_picker',
+        title: '어느 지역 주변으로 찾아드릴까요?',
         options: [
-          { label: '사하구 하단/당리', value: { location: '사하구' } },
-          { label: '부산 강서구 명지', value: { location: '강서구' } },
-          { label: '오늘 저녁 바로 방문', value: { timing: 'today' } },
-          { label: '가성비 & 넉넉한 구성', value: { priority: 'value' } },
-          { label: '조용하고 퀄리티 높은 곳', value: { priority: 'quality' } },
+          { label: '부산 사하구 (하단/당리)', value: { location: '사하구' } },
+          { label: '부산 강서구 (명지)', value: { location: '강서구' } },
+          { label: '부산진구 (서면)', value: { location: '부산진구' } },
+          { label: '기타 지역 직접 입력', value: { location: 'other' } },
         ]
       }
-    } else if (step === 2) {
-      // 2단계: 업종별 디테일 취향 카드
-      if (isFood || context.category === 'restaurant') {
-        cards = {
-          type: 'step2_food',
-          title: '동행 및 선호 스타일을 선택해 주세요',
-          options: [
-            { label: '친구/지인과 생맥주 한잔', value: { vibe: 'friends_beer' } },
-            { label: '바삭한 가마솥/후라이드', value: { menu: 'crispy' } },
-            { label: '매콤 숯불/양념 바베큐', value: { menu: 'spicy_bbq' } },
-            { label: '조용한 프라이빗 룸/테라스', value: { vibe: 'private' } },
-          ]
-        }
-      } else if (isBeauty || context.category === 'beauty') {
-        cards = {
-          type: 'step2_beauty',
-          title: '희망하시는 서비스 스타일을 선택해 주세요',
-          options: [
-            { label: '1인 단독 스트레스 프리 케어', value: { style: 'private_care' } },
-            { label: '프리미엄 탄산 스파 & 목욕', value: { style: 'spa' } },
-            { label: '전체 가위컷 / 스타일링', value: { style: 'scissor_cut' } },
-          ]
-        }
-      } else {
-        cards = {
-          type: 'step2_general',
-          title: '방문 목적과 인원을 알려주세요',
-          options: [
-            { label: '1인 단독 이용', value: { party: '1' } },
-            { label: '2~3인 소규모 모임', value: { party: '2-3' } },
-            { label: '가족 외식 / 단체 예약', value: { party: 'group' } },
-          ]
-        }
+    }
+    // 맥락 2: 지역이 정해졌거나 음식/치킨 세부 취향 대화 시 -> 취향 카드
+    else if ((mentionsLocation || context.location) && (isFood || context.category === 'restaurant')) {
+      cards = {
+        type: 'food_vibe_picker',
+        title: '선호하시는 스타일이나 분위기를 선택해 주세요',
+        options: [
+          { label: '친구와 시원한 생맥주 한잔', value: { vibe: 'beer' } },
+          { label: '겉바속촉 가마솥/옛날통닭', value: { menu: 'crispy' } },
+          { label: '조용한 프라이빗 대화 공간', value: { vibe: 'private' } },
+          { label: '가성비 좋고 푸짐한 곳', value: { priority: 'value' } },
+        ]
       }
-    } else {
-      // 3단계: 최종 실시간 맞춤 매장 큐레이션 리스트 제공
+    }
+    // 맥락 3: 뷰티/헤어/반려견 세부 케어 대화 시 -> 서비스 카드
+    else if ((mentionsLocation || context.location) && (isBeauty || context.category === 'beauty')) {
+      cards = {
+        type: 'beauty_style_picker',
+        title: '희망하시는 케어 스타일을 선택해 주세요',
+        options: [
+          { label: '1인 단독 스트레스 프리 케어', value: { style: 'private_care' } },
+          { label: '프리미엄 탄산 스파 & 목욕', value: { style: 'spa' } },
+          { label: '전체 가위컷 / 스타일링', value: { style: 'scissor_cut' } },
+        ]
+      }
+    }
+    // 맥락 4: 충분한 조건이 모였거나 매칭을 원할 때 -> 추천 매장 리스트 출력
+    if (step >= 2 || (context.location && (context.vibe || context.menu || context.style || context.priority))) {
       recommendationList = (businesses || []).map(b => ({
         id: b.id,
         name: b.name,
@@ -151,16 +144,16 @@ ${formattedHistory || '(대화 시작)'}
         slug: b.slug,
         description: b.description,
         services: (b.services || []).slice(0, 2),
-        matchReason: `고객님의 취향(${context.location || '부산'} · ${context.priority === 'value' ? '가성비' : '퀄리티'})에 99% 부합하는 추천 매장`
+        matchReason: `고객님의 조건(${context.location || '사하구'} 맞춤)에 가장 부합하는 검증된 매장`
       }))
     }
 
-    const nextStep = step >= 2 ? 3 : step + 1
+    const nextStep = recommendationList.length > 0 ? 3 : step + 1
 
     return NextResponse.json({
-      reply: aiReply?.trim() || '고객님께 가장 완벽한 매장을 찾기 위해 최적의 추천 리스트를 준비했습니다.',
+      reply: aiReply?.trim(),
       step: nextStep,
-      cards,
+      cards: cards || undefined,
       recommendationList: recommendationList.length > 0 ? recommendationList : undefined
     })
   } catch (err: any) {
