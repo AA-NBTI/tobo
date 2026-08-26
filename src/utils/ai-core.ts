@@ -66,18 +66,19 @@ async function generateWithLegacySdk(prompt: string, modelId: string): Promise<s
   if (!apiKey) throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is missing')
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  console.log(`🚀 [AI Core / legacy] Gemini 경로 (${modelId}) 호출 시도...`)
+  const actualModel = modelId.includes('flash') || modelId.includes('lite') ? 'gemini-3.6-flash' : modelId
+  console.log(`🚀 [AI Core / legacy] Gemini 경로 (${actualModel}) 호출 시도...`)
   const model = genAI.getGenerativeModel({ 
-    model: modelId
+    model: actualModel
   })
   
   const result = await model.generateContent(prompt)
   const text = result.response.text()
   const trimmed = text.trim()
   if (!trimmed) {
-    throw new Error(`[AI Core / legacy] Model ${modelId} generated empty text`)
+    throw new Error(`[AI Core / legacy] Model ${actualModel} generated empty text`)
   }
-  console.log(`✅ [AI Core / legacy] (${modelId}) 생성 성공!`)
+  console.log(`✅ [AI Core / legacy] (${actualModel}) 생성 성공!`)
   return trimmed
 }
 

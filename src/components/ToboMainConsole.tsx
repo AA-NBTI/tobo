@@ -62,6 +62,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
             message: messageContent,
             step,
             context,
+            history: messages.map(m => ({ role: m.role, content: m.content }))
           })
         })
         const data = await res.json()
@@ -98,7 +99,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   }
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-[#212121] text-gray-200 overflow-hidden font-sans">
+    <div className="flex h-[calc(100vh-56px)] bg-[#212121] text-gray-200 overflow-hidden font-sans">
       {/* ── 좌측 미니멀 다크 사이드바 (ChatGPT/Claude 스타일) ── */}
       <aside className="w-64 bg-[#171717] border-r border-[#2f2f2f] hidden md:flex flex-col justify-between p-3 shrink-0">
         <div className="space-y-4">
@@ -186,8 +187,8 @@ export default function ToboMainConsole({ user }: { user?: any }) {
 
       {/* ── 중앙/우측 대화창 (ChatGPT/Claude 스타일 순수 흑백 모노톤) ── */}
       <main className="flex-1 flex flex-col justify-between bg-[#212121] overflow-hidden relative">
-        {/* 대화 메시지 타임라인 */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 max-w-3xl w-full mx-auto">
+        {/* 대화 메시지 타임라인 (세로 스크롤바 숨김 처리) */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6 space-y-6 max-w-3xl w-full mx-auto">
           {messages.map(m => (
             <div
               key={m.id}

@@ -31,14 +31,13 @@ export default async function Header() {
 
   return (
     <>
-      <PilotStatusBar />
-      <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between w-full">
-          <Link href="/" className="text-2xl font-black tracking-tighter shrink-0 flex items-center h-full py-3">
+      <header className="bg-[#171717] border-b border-[#2f2f2f] sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between w-full">
+          <Link href="/" className="text-xl font-bold tracking-tight text-white shrink-0 flex items-center h-full py-2">
             {siteLogo ? (
-              <img src={siteLogo} alt="ToboAI Logo" className="h-full max-h-10 w-auto object-contain" />
+              <img src={siteLogo} alt="ToboAI Logo" className="h-full max-h-8 w-auto object-contain brightness-200 invert" />
             ) : (
-              <span className="text-2xl font-black tracking-tighter text-indigo-600">toboai<span className="text-cyan-500">.com</span></span>
+              <span className="text-lg font-bold tracking-tight text-white">Tobo<span className="text-gray-500 text-sm ml-1 font-normal">AI</span></span>
             )}
           </Link>
 
