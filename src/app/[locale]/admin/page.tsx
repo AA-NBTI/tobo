@@ -131,6 +131,12 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           오토봇 설정
         </Link>
         <Link 
+          href="/admin/reservations" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200"
+        >
+          📅 예약 관리
+        </Link>
+        <Link 
           href="/admin/analytics" 
           className={`px-4 py-2 text-sm font-bold rounded-t-lg ${tab === 'analytics' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
         >
