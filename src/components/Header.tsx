@@ -36,9 +36,9 @@ export default async function Header() {
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between w-full">
           <Link href="/" className="text-2xl font-black tracking-tighter shrink-0 flex items-center h-full py-3">
             {siteLogo ? (
-              <img src={siteLogo} alt="Tobo AI Logo" className="h-full max-h-10 w-auto object-contain" />
+              <img src={siteLogo} alt="ToboAI Logo" className="h-full max-h-10 w-auto object-contain" />
             ) : (
-              <span className="text-2xl font-black tracking-tighter text-indigo-600">Tobo<span className="text-cyan-500">.AI</span></span>
+              <span className="text-2xl font-black tracking-tighter text-indigo-600">toboai<span className="text-cyan-500">.com</span></span>
             )}
           </Link>
 
