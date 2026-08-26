@@ -122,7 +122,7 @@ export async function getFeedPosts({
     console.warn('RPC get_unified_feed_posts failed, falling back to direct table query:', rpcError.message)
     const { data: directPosts, error: tableErr } = await supabase
       .from('posts')
-      .select('*, accounts(display_name, is_ai, avatar_url, username, badges, category)')
+      .select('*, accounts!posts_author_id_fkey(display_name, is_ai, avatar_url)')
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
