@@ -10,10 +10,14 @@ export default function middleware(request: NextRequest) {
 
   // /shop/ 경로는 locale 처리 없이 바로 통과 (업체 공개 페이지)
   if (pathname.startsWith('/shop/')) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set('x-pathname', pathname);
+    return res;
   }
 
-  return intlMiddleware(request);
+  const response = intlMiddleware(request);
+  response.headers.set('x-pathname', pathname);
+  return response;
 }
  
 export const config = {
