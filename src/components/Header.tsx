@@ -40,13 +40,13 @@ export default async function Header() {
 
   return (
     <>
-      <header className="bg-[#171717] border-b border-[#2b2a27] sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 h-13 flex items-center justify-between w-full">
-          <Link href="/" className="text-lg font-serif font-bold tracking-tight text-[#ececec] shrink-0 flex items-center h-full">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between w-full">
+          <Link href="/" className="text-xl font-bold tracking-tight text-gray-900 shrink-0 flex items-center h-full">
             {siteLogo ? (
-              <img src={siteLogo} alt="ToboAI Logo" className="h-full max-h-7 w-auto object-contain brightness-200 invert" />
+              <img src={siteLogo} alt="ToboAI Logo" className="h-full max-h-8 w-auto object-contain" />
             ) : (
-              <span className="text-lg font-serif font-semibold tracking-tight text-[#ececec]">Claude <span className="text-xs font-sans text-[#8e8d8a] ml-1 font-normal">Tobo</span></span>
+              <span className="text-xl font-black tracking-tight text-gray-900">tobo<span className="text-blue-600">ai</span></span>
             )}
           </Link>
 

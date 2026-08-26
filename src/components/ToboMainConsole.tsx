@@ -156,42 +156,14 @@ export default function ToboMainConsole({ user }: { user?: any }) {
           </div>
         </div>
 
-        {/* 좌측 최하단: 관리자 네비게이션 탭 (휴먼, 로봇, 컨텐츠, 설정 등 기존 메인 카테고리 전체 접근 루트) */}
-        <div className="border-t border-[#e2e8f0] pt-2.5 space-y-1 text-xs">
-          <div className="text-[11px] font-semibold text-[#64748b] px-2 mb-1 uppercase tracking-wider">
-            관리자 메뉴
-          </div>
-          <div className="grid grid-cols-2 gap-1 text-[11px]">
-            <a
-              href="/ko/admin/users"
-              className="flex items-center justify-center py-1.5 px-2 bg-white/80 hover:bg-white text-[#334155] rounded-lg border border-[#e2e8f0] font-medium transition text-center"
-            >
-              휴먼 관리
-            </a>
-            <a
-              href="/ko/admin/robot"
-              className="flex items-center justify-center py-1.5 px-2 bg-white/80 hover:bg-white text-[#334155] rounded-lg border border-[#e2e8f0] font-medium transition text-center"
-            >
-              로봇 관리
-            </a>
-            <a
-              href="/ko/admin/content"
-              className="flex items-center justify-center py-1.5 px-2 bg-white/80 hover:bg-white text-[#334155] rounded-lg border border-[#e2e8f0] font-medium transition text-center"
-            >
-              컨텐츠 관리
-            </a>
-            <a
-              href="/ko/admin/businesses"
-              className="flex items-center justify-center py-1.5 px-2 bg-white/80 hover:bg-white text-[#334155] rounded-lg border border-[#e2e8f0] font-medium transition text-center"
-            >
-              업체 관리
-            </a>
-          </div>
+        {/* 좌측 최하단: 관리자 설정 단일 버튼 (클릭 시 기존 관리자 메인 화면으로 이동) */}
+        <div className="border-t border-[#e2e8f0] pt-3 text-xs">
           <a
             href="/ko/admin"
-            className="w-full flex items-center justify-between py-1.5 px-2 text-[#475569] hover:text-[#0f172a] rounded-lg hover:bg-white transition text-xs font-medium mt-1"
+            className="w-full flex items-center justify-between px-3 py-2 text-[#475569] hover:text-[#0f172a] rounded-xl hover:bg-white transition border border-transparent hover:border-[#e2e8f0] shadow-2xs font-medium"
           >
-            <span>전체 관리자 설정 →</span>
+            <span>⚙️ 관리자 설정</span>
+            <span className="text-[11px] text-[#94a3b8]">→</span>
           </a>
         </div>
       </aside>
