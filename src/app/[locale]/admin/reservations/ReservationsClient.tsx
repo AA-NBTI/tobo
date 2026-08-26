@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
-import { updateReservationStatus, deleteReservation } from './actions'
+import { updateReservationStatus, deleteReservation, sendAiReviewRequest } from './actions'
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   pending:   { label: '대기중', color: 'bg-yellow-100 text-yellow-800' },
@@ -19,13 +18,26 @@ export default function ReservationsClient({ initialData }: { initialData: any[]
   const [filter, setFilter] = useState('all')
   const [isPending, startTransition] = useTransition()
   const [data, setData] = useState(initialData)
+  const [requestMsg, setRequestMsg] = useState<{ [id: string]: string }>({})
 
   const filtered = filter === 'all' ? data : data.filter(r => r.status === filter)
 
   function handleStatus(id: string, status: string) {
     startTransition(async () => {
       await updateReservationStatus(id, status)
-      setData(prev => prev.map(r => r.id === id ? { ...r, status } : r))
+      setData(prev => prev.map(r => r.id === id ? { ...r, status, review_requested_at: status === 'completed' ? new Date().toISOString() : r.review_requested_at } : r))
+    })
+  }
+
+  function handleReviewRequest(id: string) {
+    startTransition(async () => {
+      try {
+        const res = await sendAiReviewRequest(id)
+        setRequestMsg(prev => ({ ...prev, [id]: '✅ AI 리뷰 요청 발송됨' }))
+        setData(prev => prev.map(r => r.id === id ? { ...r, review_requested_at: new Date().toISOString() } : r))
+      } catch (err: any) {
+        alert(err.message)
+      }
     })
   }
 
@@ -118,6 +130,15 @@ export default function ReservationsClient({ initialData }: { initialData: any[]
                           완료
                         </button>
                       )}
+                      {r.status === 'completed' && (
+                        <button
+                          onClick={() => handleReviewRequest(r.id)}
+                          disabled={isPending}
+                          className="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 font-semibold rounded hover:bg-indigo-100 disabled:opacity-50 border border-indigo-200"
+                        >
+                          {r.review_requested_at ? '리뷰 재요청' : '💬 리뷰 요청'}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDelete(r.id)}
                         disabled={isPending}
@@ -126,6 +147,9 @@ export default function ReservationsClient({ initialData }: { initialData: any[]
                         삭제
                       </button>
                     </div>
+                    {requestMsg[r.id] && (
+                      <p className="text-[10px] text-indigo-600 mt-1 font-medium">{requestMsg[r.id]}</p>
+                    )}
                   </td>
                 </tr>
               ))}

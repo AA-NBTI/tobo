@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import BookingPanel from './BookingPanel'
+import ReviewSection from './ReviewSection'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ async function getBusinessBySlug(slug: string) {
   // 1. slug로 먼저 조회
   const { data: bySlug } = await admin
     .from('businesses')
-    .select('*, services(*)')
+    .select('*, services(*), reviews(*)')
     .eq('slug', decodedSlug)
     .eq('is_active', true)
     .maybeSingle()
@@ -24,7 +25,7 @@ async function getBusinessBySlug(slug: string) {
   // 2. id로 조회 (fallback)
   const { data: byId } = await admin
     .from('businesses')
-    .select('*, services(*)')
+    .select('*, services(*), reviews(*)')
     .eq('id', decodedSlug)
     .eq('is_active', true)
     .maybeSingle()
@@ -132,6 +133,13 @@ export default async function BusinessPublicPage({ params }: { params: Promise<{
             <BookingPanel business={business} services={activeServices} />
           </div>
         </div>
+
+        {/* 방문자 리뷰 & AI 점주 답글 섹션 */}
+        <ReviewSection
+          businessId={business.id}
+          businessName={business.name}
+          initialReviews={business.reviews || []}
+        />
       </div>
     </div>
   )
