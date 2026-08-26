@@ -1,7 +1,7 @@
 import { redirect, notFound } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { isAdmin } from '@/utils/auth'
-import { getBusiness, createService, deleteService } from '../actions'
+import { getBusiness } from '../actions'
 import ServiceManagerClient from './ServiceManagerClient'
 
 export const dynamic = 'force-dynamic'

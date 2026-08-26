@@ -103,7 +103,7 @@ export default function ReservationCalendar({ reservations }: { reservations: an
                 <span className="font-medium text-xs">{d.getDate()}</span>
                 {hasRes && (
                   <div className="flex gap-0.5 mt-0.5 flex-wrap justify-center px-0.5">
-                    {dayRes.slice(0, 3).map((r, ri) => (
+                    {dayRes.slice(0, 3).map((r: any, ri: number) => (
                       <span
                         key={ri}
                         className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white/80' : STATUS_LABELS[r.status]?.dot || 'bg-gray-400'}`}
