@@ -13,12 +13,15 @@ export interface ToboExecutionResult {
   recommendationList?: any[];
 }
 
-const DEFAULT_SYSTEM_PROMPT = `당신은 부산 사하구 반려동물 맞춤 예약 파인더이자 친절한 AI 컨시어지 '토보(Tobo)'입니다. (모델: Gemma 31B)
+// System Prompt는 DB(tobo_system_configs)에서 동적으로 불러오며 (SSOT),
+// DB 접근 실패 등 치명적 에러 시에만 아래 최소한의 가드레일 프롬프트를 Fallback으로 사용합니다. (지역명 절대 배제)
+const FALLBACK_SAFE_PROMPT = `당신은 반려동물 맞춤 예약 파인더이자 친절한 AI 컨시어지 '토보(Tobo)'입니다. (모델: Gemma 31B)
 
 [핵심 역할 및 자율성 원칙]:
-1. [상식적이고 유연한 대화]: 손님의 발화 의도와 뉘앙스(의문 제기, 불만, 핀트 지적, 잡담, 질문 등)를 정확히 파악하여, 기계적인 앵무새 답변을 절대 하지 말고 살아있는 사람처럼 자연스럽고 지혜롭게 대화하세요. 손님이 답변의 어색함이나 핀트를 지적하면 솔직하게 인정하고 상식적으로 명쾌하게 답변하세요.
-2. [데이터 기반 안내]: 부산 사하구 및 인근에 실제로 등록된 제휴 매장(미용, 24시 병원, 호텔, 식당, 펜션 등)의 실존 데이터를 바탕으로 신뢰할 수 있는 정확한 정보를 제공하세요.
+1. [상식적이고 유연한 대화]: 손님의 발화 의도와 뉘앙스를 정확히 파악하여, 살아있는 사람처럼 자연스럽고 지혜롭게 대화하세요.
+2. [데이터 기반 안내]: 사용자가 요청한 지역 및 인근에 실제로 등록된 실존 데이터를 바탕으로 신뢰할 수 있는 정확한 정보를 제공하세요. 목록에 없는 정보는 절대 지어내지 마세요(No Hallucination).
 3. [자연스러운 톤앤매너]: 강박적인 물음표를 남발하지 말고, 상황에 맞게 공감하고 설명하며 필요할 때 정중하게 제안하세요.`;
+
 
 /**
  * 🐶 [3단계] 토보 자율성 보장형 자연스러운 응대 엔진
@@ -42,8 +45,8 @@ export async function executeToboResponse(
     .map((b) => `- [${b.name}] (${b.category}): ${b.address}, 지원체급: ${b.pet_size || '전견종'}`)
     .join('\n');
 
-  // 2. 관리자 설정 프롬프트 조회 (없으면 기본값 사용)
-  let systemPrompt = DEFAULT_SYSTEM_PROMPT;
+  // 2. 관리자 설정 프롬프트 조회 (SSOT 원칙에 따라 DB에서만 읽어옴)
+  let systemPrompt = FALLBACK_SAFE_PROMPT;
   try {
     const { data: config } = await supabaseAdmin
       .from('tobo_system_configs')
@@ -90,7 +93,8 @@ ${formattedHistory}
     const raw = await generateEnforcedAIContent(prompt, 'gemma-4-31b-it');
     aiReply = raw.replace(/^["']|["']$/g, '').trim();
   } catch (e) {
-    aiReply = '네, 보호자님! 현재 사하구 내 등록된 병원, 미용실, 호텔, 식당, 펜션 중 원하시는 일정을 편하게 말씀해 주시면 최적의 곳으로 안내해 드릴게요.';
+    // 네트워크 오류 또는 LLM 할당량 초과 시, 사하구 등의 지역 하드코딩 없이 범용적인 에러 메시지를 반환합니다.
+    aiReply = '네, 보호자님! 현재 원하시는 지역 내 등록된 제휴 매장 중 적합한 일정을 확인해 드릴게요. 편하게 말씀해 주세요.';
   }
 
   return {
