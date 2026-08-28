@@ -38,6 +38,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   const [sessions, setSessions] = useState<any[]>([])
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [input, setInput] = useState('')
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [isPending, startTransition] = useTransition()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
@@ -105,6 +106,20 @@ export default function ToboMainConsole({ user }: { user?: any }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isPending])
 
+  // 자동 포커스 복귀: 전송(isPending) 완료 후 입력창에 포커스를 다시 줍니다.
+  useEffect(() => {
+    if (!isPending) {
+      setTimeout(() => inputRef.current?.focus(), 50)
+    }
+  }, [isPending])
+
+  // 텍스트에어리어 자동 높이 조절
+  const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
+    if (!element) return
+    element.style.height = 'auto'
+    element.style.height = `${Math.min(element.scrollHeight, 128)}px` // max-h-32 (128px)
+  }
+
   async function handleSend(textToSend?: string) {
     const messageContent = (textToSend || input).trim()
     if (!messageContent || isPending) return
@@ -117,7 +132,12 @@ export default function ToboMainConsole({ user }: { user?: any }) {
 
     const nextHistory = [...messages, userMsg].map(m => ({ role: m.role, content: m.content }))
     setMessages(prev => [...prev, userMsg])
-    if (!textToSend) setInput('')
+    if (!textToSend) {
+      setInput('')
+      if (inputRef.current) {
+        inputRef.current.style.height = 'auto'
+      }
+    }
 
     const sessionId = currentSessionId
 
@@ -410,8 +430,12 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                   className="flex items-center gap-2 bg-white border border-[#cbd5e1] focus-within:border-[#0f172a] rounded-2xl px-4 py-3 shadow-sm transition"
                 >
                   <textarea
+                    ref={inputRef}
                     value={input}
-                    onChange={e => setInput(e.target.value)}
+                    onChange={e => {
+                      setInput(e.target.value)
+                      adjustTextareaHeight(e.target)
+                    }}
                     onKeyDown={e => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -565,8 +589,12 @@ export default function ToboMainConsole({ user }: { user?: any }) {
               className="flex items-center gap-2 bg-white border border-[#cbd5e1] focus-within:border-[#0f172a] rounded-2xl px-4 py-2.5 shadow-2xs transition"
             >
               <textarea
+                ref={inputRef}
                 value={input}
-                onChange={e => setInput(e.target.value)}
+                onChange={e => {
+                  setInput(e.target.value)
+                  adjustTextareaHeight(e.target)
+                }}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
