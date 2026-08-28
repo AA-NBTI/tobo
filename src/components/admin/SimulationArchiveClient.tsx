@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { Play, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertCircle, Sparkles, Layers, FileText, Check, X, Building2, Stethoscope, Hotel, Utensils, Scissors, Bot, GraduationCap, Award, Crown } from 'lucide-react'
+import { Play, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertCircle, Sparkles, Layers, FileText, Check, X, Building2, Stethoscope, Hotel, Utensils, Scissors, Bot, GraduationCap, Award, Crown, Sliders } from 'lucide-react'
 
 export default function SimulationArchiveClient({
   initialRuns,
