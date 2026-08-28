@@ -2,11 +2,26 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { generateText } from 'ai'
 
+// ── 지원 모델 명시적 화이트리스트 (이 외의 모델은 즉시 차단) ──────
+const SUPPORTED_MODELS = [
+  'gemma-4-31b-it',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemma-4-26b-a4b-it'
+];
+
 // ── 모델명 정규화 (옛날 DB 레코드나 이상한 모델명 들어왔을 때 자동 보정) ──────
 function normalizeModelName(model?: string): string {
+  // 1. 값이 비어있거나 특정 키워드인 경우 기본 모델로 강제 덮어쓰기
   if (!model || model === 'local' || model === 'default' || model === 'base-gemma') {
     return 'gemma-4-31b-it'
   }
+  
+  // 2. 화이트리스트 검증 (Fail-Fast)
+  if (!SUPPORTED_MODELS.includes(model)) {
+    throw new Error(`[CRITICAL] 허용되지 않은 모델명입니다: ${model}. 시스템에 등록된 모델만 사용할 수 있습니다.`)
+  }
+  
   return model
 }
 
@@ -66,7 +81,7 @@ async function generateWithLegacySdk(prompt: string, modelId: string): Promise<s
   if (!apiKey) throw new Error('GOOGLE_GENERATIVE_AI_API_KEY is missing')
 
   const genAI = new GoogleGenerativeAI(apiKey)
-  const actualModel = modelId.includes('flash') || modelId.includes('lite') ? 'gemini-3.6-flash' : modelId
+  const actualModel = modelId.includes('flash') || modelId.includes('lite') ? 'gemini-1.5-flash' : modelId
   console.log(`🚀 [AI Core / legacy] Gemini 경로 (${actualModel}) 호출 시도...`)
   const model = genAI.getGenerativeModel({ 
     model: actualModel

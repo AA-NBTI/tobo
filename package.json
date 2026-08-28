@@ -1,9 +1,9 @@
 {
   "name": "toboai",
-  "version": "1.16.0",
+  "version": "1.17.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
