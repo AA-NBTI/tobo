@@ -143,6 +143,66 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           📅 예약 관리
         </Link>
         <Link 
+          href="/admin/simulation-report" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+        >
+          📊 시뮬레이션 요약
+        </Link>
+        <Link 
+          href="/admin/preference-library" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-purple-100 text-purple-800 hover:bg-purple-200"
+        >
+          📚 취향 자료실(7대 슬롯)
+        </Link>
+        <Link 
+          href="/admin/high-value-profile-report" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-indigo-100 text-indigo-900 hover:bg-indigo-200"
+        >
+          💎 고급 프로파일 전략
+        </Link>
+        <Link 
+          href="/admin/recommendation-taxonomy" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-teal-100 text-teal-900 hover:bg-teal-200"
+        >
+          🌲 추천 기준 트리
+        </Link>
+        <Link 
+          href="/admin/question-card-catalog" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-pink-100 text-pink-900 hover:bg-pink-200"
+        >
+          📇 질문카드 카탈로그
+        </Link>
+        <Link 
+          href="/admin/eval" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-amber-100 text-amber-900 hover:bg-amber-200"
+        >
+          🎯 시뮬레이션 채점
+        </Link>
+        <Link 
+          href="/admin/simulation-archive" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-blue-600 text-white hover:bg-blue-700 shadow-xs"
+        >
+          📑 7대 회귀 테스트 아카이브
+        </Link>
+        <Link 
+          href="/admin/conversation-cases" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-indigo-100 text-indigo-900 hover:bg-indigo-200"
+        >
+          💬 실전 대화 아카이브
+        </Link>
+        <Link 
+          href="/admin/squad-lab" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-rose-100 text-rose-900 hover:bg-rose-200"
+        >
+          🏛️ 봇 군단 LAB
+        </Link>
+        <Link 
+          href="/admin/tobo-prompt-config" 
+          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-blue-500 text-white hover:bg-blue-600 shadow-xs flex items-center gap-1.5"
+        >
+          ✨ 토보 프롬프트 설정
+        </Link>
+        <Link 
           href="/admin/analytics" 
           className={`px-4 py-2 text-sm font-bold rounded-t-lg ${tab === 'analytics' ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
         >

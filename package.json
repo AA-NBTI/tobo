@@ -1,12 +1,14 @@
 {
   "name": "toboai",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:core": "node test_core_bugs.js",
+    "test:conversations": "node run_cli_test.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.17",
