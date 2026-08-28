@@ -19,11 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-          cache: 'npm'
-
-      - name: Install Dependencies
-        run: npm ci
+          node-version: 20
 
       - name: Run 4-Core Unit Tests
-        run: npm run test:core
+        run: node test_core_bugs.js

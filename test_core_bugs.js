@@ -11,8 +11,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const { rankRealBusinesses } = require('./src/modules/tobo/engine/matching-scorer.ts');
-const { structureUserIntent } = require('./src/modules/tobo/engine/intent-structuring-engine.ts');
+const { rankRealBusinesses } = require('./src/modules/tobo/engine/matching-scorer.js');
+const { structureUserIntent } = require('./src/modules/tobo/engine/intent-structuring-engine.js');
 
 let passedTests = 0;
 let failedTests = 0;
