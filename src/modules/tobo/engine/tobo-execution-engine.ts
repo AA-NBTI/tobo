@@ -1,8 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { generateEnforcedAIContent } from '../../../utils/ai-core.ts';
-import { structureUserIntent, StructuredIntent } from './intent-structuring-engine.ts';
-import { prepareLeadMaterial, LeadQuestionCard } from './lead-material-orchestrator.ts';
-import { rankRealBusinesses } from './matching-scorer.ts';
+import { generateEnforcedAIContent } from '../../../utils/ai-core';
+import { structureUserIntent, StructuredIntent } from './intent-structuring-engine';
+import { prepareLeadMaterial, LeadQuestionCard } from './lead-material-orchestrator';
+import { rankRealBusinesses } from './matching-scorer';
 
 export interface ToboExecutionResult {
   reply: string;
