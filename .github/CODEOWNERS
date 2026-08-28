@@ -1,0 +1,5 @@
+# Lines starting with '#' are considered comments.
+# This file defines owners of specific paths in the repository.
+
+test_core_bugs.js @AA-NBTI
+.github/workflows/ci.yml @AA-NBTI
