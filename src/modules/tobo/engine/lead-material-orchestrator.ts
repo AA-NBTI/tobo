@@ -88,16 +88,11 @@ export function prepareLeadMaterial(cardType: string, category: string | null): 
       cardId: 'CATEGORY_SELECTOR',
       title: '어떤 서비스의 예약을 도와드릴까요?',
       options: [
-        { label: '🍽️ 맛집 / 식당', value: { category: 'dining' } },
-        { label: '☕ 카페 / 디저트', value: { category: 'cafe' } },
-        { label: '🍻 술집 / 이자카야', value: { category: 'bar' } },
-        { label: '✂️ 미용실 / 헤어샵', value: { category: 'hair_salon' } },
-        { label: '🐶 반려동물 서비스', value: { category: 'pet_service' } },
-        { label: '💅 네일 / 뷰티샵', value: { category: 'nail_beauty' } },
-        { label: '🏋️ 헬스 / 피트니스', value: { category: 'fitness' } },
-        { label: '📸 스튜디오 / 사진관', value: { category: 'studio' } },
-        { label: '🏨 숙박 / 모텔 / 호텔', value: { category: 'accommodation' } },
-        { label: '🏥 병원 / 의원 (사람용)', value: { category: 'clinic_human' } },
+        { label: '✂️ 강아지 미용 / 목욕', value: { category: 'pet_grooming' } },
+        { label: '🏥 동물병원 / 진료', value: { category: 'clinic' } },
+        { label: '🏨 애견호텔 / 유치원', value: { category: 'pet_hotel' } },
+        { label: '🍽️ 애견동반 식당 / 카페', value: { category: 'pet_dining' } },
+        { label: '🏕️ 애견동반 펜션 / 풀빌라', value: { category: 'pet_pension' } },
         { label: '💡 다른 서비스 찾기', value: { category: 'UNSUPPORTED' } }
       ]
     };
