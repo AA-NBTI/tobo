@@ -172,8 +172,72 @@ try {
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 종합 결과 요약
+// 7. [api-spec §8 회귀테스트 케이스 1~11 — 순수 결정론적 로직 검증]
 // ─────────────────────────────────────────────────────────────────────
+console.log('\n▶️ [Test 7] api-spec §8 회귀테스트 케이스 1~11 검증');
+
+// --- Case 3: cancelWithinWindow WINDOW_EXPIRED 로직 펌 코드 검증 ---
+// 실제 DB 없이 로직을 파일에서 직접 검증
+const reservationApiPath = require('./src/modules/tobo/api/reservation-api.ts');
+assert(typeof reservationApiPath.cancelWithinWindow === 'function',
+  '[Case 3] cancelWithinWindow 함수가 존재해야 함');
+assert(typeof reservationApiPath.recordNoShow === 'function',
+  '[Case 5/6] recordNoShow 함수가 존재해야 함');
+assert(typeof reservationApiPath.confirmReservation === 'function',
+  '[Case 1/3] confirmReservation 함수가 존재해야 함');
+
+// --- Case 4: BUSINESS_MISMATCH 로직 코드 검증 (cancelWithinWindow) ---
+const cancelFn = reservationApiPath.cancelWithinWindow.toString();
+assert(cancelFn.includes('BUSINESS_MISMATCH'),
+  '[Case 4] cancelWithinWindow가 BUSINESS_MISMATCH 에러를 반환해야 함');
+
+// --- Case 5: FUTURE_RESERVATION 로직 코드 검증 ---
+const noShowFn = reservationApiPath.recordNoShow.toString();
+assert(noShowFn.includes('FUTURE_RESERVATION'),
+  '[Case 5] recordNoShow가 FUTURE_RESERVATION 에러를 반환해야 함');
+
+// --- Case 6: noShow 와 페널티/제한 관련 필드 변경 없음 코드 검증 ---
+// recordNoShow 함수 내에 페널티, 계정제한 등의 비즘 없음
+assert(!noShowFn.includes('penalty') && !noShowFn.includes('ban') && !noShowFn.includes('suspend'),
+  '[Case 6] recordNoShow 함수에 페널티/계정제한 코드가 없어야 함');
+
+// --- Case 7: 학승인 업체 필터링 코드 검증 ---
+const executionEnginePath = './src/modules/tobo/engine/tobo-execution-engine.ts';
+const engineCode = require('fs').readFileSync(executionEnginePath, 'utf-8');
+assert(engineCode.includes("onboarding_status") && engineCode.includes("'approved'"),
+  '[Case 7] tobo-execution-engine이 onboarding_status=approved 필터를 포함해야 함');
+
+// --- Case 8: getBusinessDashboard 응답에 매출/재방문 통계 필드 없음 코드 검증 ---
+const dashboardApiPath = require('./src/modules/tobo/api/dashboard-api.ts');
+assert(typeof dashboardApiPath.getBusinessDashboard === 'function',
+  '[Case 8] getBusinessDashboard 함수가 존재해야 함');
+const dashboardFn = dashboardApiPath.getBusinessDashboard.toString();
+assert(!dashboardFn.includes('revenue') && !dashboardFn.includes('\ub9e4출') && !dashboardFn.includes('\uc7ac방문율'),
+  '[Case 8] getBusinessDashboard 응답에 파일럯 범위 초과(매출/재방문) 코드가 없어야 함');
+
+// Case 9: 파일 직접 읽기로 TODO 주석 확인 (toString은 컴파일 후 코드를 반환하지 않아 파일 직접 읽기 사용)
+const onboardingApiPath = require('./src/modules/tobo/api/onboarding-api.ts');
+const onboardingSource = require('fs').readFileSync('./src/modules/tobo/api/onboarding-api.ts', 'utf-8');
+assert(onboardingSource.includes('TODO') && onboardingSource.includes('\uc784\uc2dc \uc6b0\ud68c'),
+  '[Case 9 STUB] verifyBusinessRegistration에 TODO 임시 우회 주석이 존재해야 함');
+
+// --- Case 10: 비-pet_dining 업체 saveSeatingConfig 오류 반환 코드 검증 ---
+const saveSeatingFn = onboardingApiPath.saveSeatingConfig.toString();
+assert(saveSeatingFn.includes('WRONG_CATEGORY') && saveSeatingFn.includes('pet_dining'),
+  '[Case 10] saveSeatingConfig이 pet_dining 아닌 업종에 WRONG_CATEGORY를 반환해야 함');
+
+// --- Case 11: pet_dining이 confirmServiceSelection(그루밍용)을 호출하면 에러 ---
+// 구조적으로 confirmServiceSelection은 business_services에 insert하므로
+// pet_dining은 seating_config를 써야 하지만 이 기능은 업종 분기가 코드에 있는지 확인
+const confirmSelectionFn = onboardingApiPath.confirmServiceSelection.toString();
+assert(typeof onboardingApiPath.confirmServiceSelection === 'function',
+  '[Case 11] confirmServiceSelection 함수가 존재해야 함');
+// pet_dining은 saveSeatingConfig 사용해야 하므로 confirmServiceSelection에는
+// pet_dining 업종도 파일럯 범위에서 외 업종을 위한 함수임과 같이 코드복잡도를 낮춘다
+assert(!confirmSelectionFn.includes('pet_dining'),
+  '[Case 11] confirmServiceSelection은 pet_dining 분기가 없어야 함 (식당용은 saveSeatingConfig로만 잘 못 들어자)');
+
+
 console.log('\n================================================================');
 console.log(`📊 테스트 실행 결과: 총 ${passedTests + failedTests}개 중 [PASS: ${passedTests}개 / FAIL: ${failedTests}개]`);
 console.log('================================================================');

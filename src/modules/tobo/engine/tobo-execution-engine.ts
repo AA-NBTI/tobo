@@ -116,7 +116,8 @@ export async function executeToboResponse(
     let query = supabaseAdmin
       .from('businesses')
       .select('id, name, category, address, region, pet_size, price_range, is_active, slug')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('onboarding_status', 'approved');  // SSOT §10 + api-spec 케이스 7: 미승인 업체 필터링
       
     if (intentData.slots.category && intentData.slots.category !== 'UNSUPPORTED') {
       query = query.eq('category', intentData.slots.category);
