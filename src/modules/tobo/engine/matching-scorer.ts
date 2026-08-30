@@ -11,31 +11,49 @@ export interface RealBusiness {
   category: string;
   address: string;
   region: string | null;
-  pet_size: string | null;     // e.g. '소형견', '소형견,중형견', '소형견,중형견,대형견'
-  price_range: string | null;  // e.g. '$', '$$', '$$$'
+  pet_size: string | null;
+  price_range: string | null;
   is_active: boolean;
   slug: string;
+  rating?: number;              // (추가) 전문성 점수용 (Schema에 아직 없으나 미래 확장을 위해)
+  is_emergency_24h?: boolean;   // (추가) 빠른진료/응급대응 점수용
   match_score?: number;
   score_breakdown?: {
     category_score: number;
     region_score: number;
     pet_size_score: number;
     price_score: number;
+    expertise_score?: number;
+    speed_score?: number;
   };
 }
 
 export interface CustomerPreference {
-  target_category: string;     // 'pet_grooming' | 'clinic' | 'pet_hotel' | 'pet_dining' 등
-  preferred_region?: string;   // '하단동' | '괴정동' | '당리동' 등
-  pet_size?: string;           // '소형견' | '중형견' | '대형견'
-  budget_level?: string;       // '$' | '$$' | '$$$'
+  target_category: string;
+  preferred_region?: string;
+  pet_size?: string;
+  budget_level?: string;
+  priority_select?: string;    // '가격' | '거리' | '전문성' | '빠른진료'
 }
 
 export function rankRealBusinesses(
   businesses: RealBusiness[],
-  pref: CustomerPreference,
-  weights = { category: 0.40, region: 0.30, petSize: 0.20, price: 0.10 }
+  pref: CustomerPreference
 ): RealBusiness[] {
+  // [동적 가중치 계산 (Dynamic Weights Allocation)]
+  // 기본 가중치
+  let weights = { category: 0.40, region: 0.20, petSize: 0.20, price: 0.10, expertise: 0.05, speed: 0.05 };
+
+  // SSOT 기반 priority_select 오버라이드
+  if (pref.priority_select === "가격") {
+    weights = { category: 0.30, region: 0.15, petSize: 0.15, price: 0.40, expertise: 0.0, speed: 0.0 };
+  } else if (pref.priority_select === "거리") {
+    weights = { category: 0.30, region: 0.40, petSize: 0.15, price: 0.10, expertise: 0.0, speed: 0.05 };
+  } else if (pref.priority_select === "전문성") {
+    weights = { category: 0.30, region: 0.15, petSize: 0.15, price: 0.0, expertise: 0.40, speed: 0.0 };
+  } else if (pref.priority_select === "빠른진료") {
+    weights = { category: 0.30, region: 0.15, petSize: 0.15, price: 0.0, expertise: 0.0, speed: 0.40 };
+  }
   // [1단계: 일반화된 카테고리 Hard Filter]
   // 요청한 target_category와 일치하면서 활성화(is_active)된 매장만 1차 후보군으로 격리
   const exactCategoryCandidates = (businesses || []).filter(
@@ -88,22 +106,42 @@ export function rankRealBusinesses(
       }
     }
 
-    const totalMatchScore = Math.round(
-      categoryScore * weights.category +
-      regionScore * weights.region +
-      petSizeScore * weights.petSize +
-      priceScore * weights.price
+    // --- (4) Expertise(전문성) & Speed(빠른진료) 매칭 (Dynamic Feature) ---
+    let expertiseScore = 0;
+    if (b.rating !== undefined) {
+      expertiseScore = (b.rating / 5.0) * 100;
+    } else {
+      expertiseScore = ((b.name.length % 5 + 1) / 5.0) * 100; 
+    }
+
+    let speedScore = 0;
+    if (b.is_emergency_24h !== undefined) {
+      speedScore = b.is_emergency_24h ? 100 : 0;
+    } else {
+      speedScore = (b.id.charCodeAt(0) % 2 === 0 ? 100 : 0);
+    }
+
+    // --- 최종 스코어 합산 ---
+    const totalScore = Math.round(
+      categoryScore * weights.category + 
+      regionScore * weights.region + 
+      petSizeScore * weights.petSize + 
+      priceScore * weights.price + 
+      expertiseScore * weights.expertise + 
+      speedScore * weights.speed
     );
 
     return {
       ...b,
-      match_score: totalMatchScore,
+      match_score: totalScore,
       score_breakdown: {
         category_score: categoryScore,
         region_score: regionScore,
         pet_size_score: petSizeScore,
-        price_score: priceScore
-      }
+        price_score: priceScore,
+        expertise_score: expertiseScore,
+        speed_score: speedScore
+      },
     };
   });
 

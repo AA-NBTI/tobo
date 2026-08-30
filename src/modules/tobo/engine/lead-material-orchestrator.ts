@@ -1,123 +1,176 @@
 /**
  * 🃏 [2단계] 대화 리드 자료 준비 오케스트레이터 (Lead Material Orchestrator)
- * - 실제 DB 등록 카테고리를 반영한 올바른 최상위 선택 카드 디스패치
- * - "예약 가능하니?" ➔ 업종을 모를 땐 미용 카드가 아니라 [최상위 업종 선택 카드] 제시!
  */
+
+export enum FunnelStage {
+  GOAL_DISCOVERY = 0,    // 목적 파악
+  DETAIL_GATHERING = 1,  // 상세 조건 파악
+  NARROWING = 2,         // 매장 제안/좁히기
+  CONFIRMATION = 3,      // 예약 확정
+}
+
+export interface CardTemplate {
+  card_type: string;
+  required_slots: string[];
+  stage: FunnelStage;
+  priority: number;
+}
+
+export const CARD_TEMPLATES: CardTemplate[] = [
+  { card_type: "category_select",       required_slots: [], stage: FunnelStage.GOAL_DISCOVERY, priority: 0 },
+  { card_type: "region_select",         required_slots: ["category"], stage: FunnelStage.DETAIL_GATHERING, priority: 1 },
+  // 업종별 세부조건 카드 (우선순위 2 - 지역 다음)
+  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "style_select",          required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  // 1-b 우선순위 파악 (우선순위 3)
+  { card_type: "priority_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  // 매장 리스트 제안 (우선순위 4) - 세부조건과 우선순위가 파악된 후 매장 노출
+  { card_type: "business_list",         required_slots: ["category", "region_hint", "priority"], stage: FunnelStage.NARROWING, priority: 4 },
+  // 매장 확정 후 날짜/시간 선택 (우선순위 5, 6)
+  { card_type: "date_select",           required_slots: ["category", "region_hint", "business_id"], stage: FunnelStage.NARROWING, priority: 5 },
+  { card_type: "time_slot",             required_slots: ["category", "region_hint", "business_id", "target_date"], stage: FunnelStage.NARROWING, priority: 6 },
+  { card_type: "reservation_confirm",   required_slots: ["category", "region_hint", "business_id", "target_date", "target_time"], stage: FunnelStage.CONFIRMATION, priority: 7 },
+];
 
 export interface LeadQuestionCard {
   type?: string;
   cardId: string;
   title: string;
-  options: Array<{ label: string; value: any }>;
+  options?: Array<{ label: string; value: any }>;
   isUnmetCollector?: boolean;
 }
 
-export function prepareLeadMaterial(
-  detectedDomain: string | null,
-  intentType: string,
-  turnStep: number,
-  unmetDetail?: any
-): LeadQuestionCard {
-  // 1. 미지원 잠재 수요 발생 시 ➔ [신규 출시 알림 신청 카드] 준비
-  if (intentType === 'UNMET_DEMAND' && unmetDetail) {
+export interface BestCardResult {
+  cardType: string | null;
+  stage: FunnelStage;
+  action: "SHOW_CARD" | "NONE";
+}
+
+export function selectBestCard(
+  filledSlots: Set<string>,
+  lastShownCardType: string | null,
+  turnsSinceLastShown: number,
+  userForceReshow: boolean,
+  category?: string | null
+): BestCardResult {
+  // 1. 미지원 수요(UNSUPPORTED) 최우선 처리
+  if (category === "UNSUPPORTED") {
+    if (lastShownCardType === "unmet_notification" && !userForceReshow && turnsSinceLastShown < 2) {
+      return { cardType: null, stage: FunnelStage.GOAL_DISCOVERY, action: "NONE" };
+    }
+    return { cardType: "unmet_notification", stage: FunnelStage.GOAL_DISCOVERY, action: "SHOW_CARD" };
+  }
+
+  // 2. 정상 퍼널 매칭
+  const eligible = CARD_TEMPLATES.filter(t => 
+    t.required_slots.every(s => filledSlots.has(s))
+  );
+  const best = eligible.sort((a, b) => b.priority - a.priority)[0];
+
+  if (!best) {
+    return { cardType: null, stage: FunnelStage.GOAL_DISCOVERY, action: "NONE" };
+  }
+
+  // 3. 루프 방지 로직 (같은 카드 반복 노출 제한)
+  if (best.card_type === lastShownCardType && !userForceReshow && turnsSinceLastShown < 2) {
+    return { cardType: null, stage: best.stage, action: "NONE" };
+  }
+
+  return { cardType: best.card_type, stage: best.stage, action: "SHOW_CARD" };
+}
+
+export function prepareLeadMaterial(cardType: string, category: string | null): LeadQuestionCard {
+  if (cardType === 'category_select') {
+    return {
+      type: 'category_select_picker',
+      cardId: 'CATEGORY_SELECTOR',
+      title: '어떤 서비스의 예약을 도와드릴까요?',
+      options: [
+        { label: '🍽️ 맛집 / 식당', value: { category: 'dining' } },
+        { label: '☕ 카페 / 디저트', value: { category: 'cafe' } },
+        { label: '🍻 술집 / 이자카야', value: { category: 'bar' } },
+        { label: '✂️ 미용실 / 헤어샵', value: { category: 'hair_salon' } },
+        { label: '🐶 반려동물 서비스', value: { category: 'pet_service' } },
+        { label: '💅 네일 / 뷰티샵', value: { category: 'nail_beauty' } },
+        { label: '🏋️ 헬스 / 피트니스', value: { category: 'fitness' } },
+        { label: '📸 스튜디오 / 사진관', value: { category: 'studio' } },
+        { label: '🏨 숙박 / 모텔 / 호텔', value: { category: 'accommodation' } },
+        { label: '🏥 병원 / 의원 (사람용)', value: { category: 'clinic_human' } },
+        { label: '💡 다른 서비스 찾기', value: { category: 'UNSUPPORTED' } }
+      ]
+    };
+  }
+
+  if (cardType === 'region_select') {
+    return {
+      type: 'region_select_picker',
+      cardId: 'REGION_SELECTOR',
+      title: '어느 지역의 매장을 찾으시나요?',
+      options: [
+        { label: '📍 하단역 주변 (역세권)', value: { region_hint: '하단역' } },
+        { label: '📍 동아대 승학캠퍼스 주변', value: { region_hint: '동아대' } },
+        { label: '📍 하단 아트몰링 주변', value: { region_hint: '아트몰링' } },
+        { label: '📍 사하구 전체 검색', value: { region_hint: '사하구' } }
+      ]
+    };
+  }
+
+  if (cardType === 'date_select') {
+    return {
+      type: 'date_select_picker',
+      cardId: 'DATE_SELECTOR',
+      title: '방문 원하시는 날짜를 선택해 주세요.',
+      options: [
+        { label: '🗓️ 오늘', value: { target_date: '오늘' } },
+        { label: '🗓️ 내일', value: { target_date: '내일' } },
+        { label: '🗓️ 이번 주말', value: { target_date: '이번주말' } },
+        { label: '📅 직접 선택', value: { open_calendar: true } }
+      ]
+    };
+  }
+
+  if (cardType === 'unmet_notification') {
     return {
       type: 'unmet_notification_picker',
       cardId: 'UNMET_NOTIFICATION_CARD',
-      title: `${unmetDetail.label} 오픈 시 알림을 받으시겠어요?`,
+      title: '앗! 아직 준비 중인 서비스예요. 😢 오픈 시 가장 먼저 알려드릴까요?',
       isUnmetCollector: true,
       options: [
-        { label: '🔔 서비스 오픈 시 알림 신청하기', value: { notify_agree: true, category: unmetDetail.category } },
-        { label: '📍 하단동 인근 다른 서비스 알아보기', value: { explore_other: true } },
-        { label: '💡 다른 서비스를 찾고 있어요', value: { custom_request: true } }
+        { label: '🔔 서비스 오픈 알림 신청하기', value: { notify_agree: true } },
+        { label: '💡 다른 서비스 찾아보기', value: { back_to_home: true } }
       ]
     };
   }
 
-  // 2. 도메인 미식별 상태 ("예약 가능하니?") ➔ [최상위 업종 선택 카드] 준비 (미용 카드 들이밀기 금지!)
-  if (!detectedDomain || turnStep <= 1) {
+  if (cardType === 'business_list') {
     return {
-      type: 'root_domain_picker',
-      cardId: 'ROOT_DOMAIN_SELECTOR',
-      title: '어떤 서비스의 예약을 도와드릴까요?',
-      options: [
-        { label: '✂️ 애견 미용 / 스파', value: { domain: 'pet_grooming' } },
-        { label: '🩺 동물병원 / 24시 응급 진료', value: { domain: 'clinic' } },
-        { label: '🏨 펫 호텔 / 데이 유치원', value: { domain: 'pet_hotel' } },
-        { label: '🍽️ 반려견 동반 식당 / 카페', value: { domain: 'pet_dining' } },
-        { label: '🏕️ 반려견 동반 독채 펜션 / 풀빌라', value: { domain: 'pet_pension' } },
-        { label: '💡 찾는 서비스가 없어요 (기타)', value: { domain: 'unmet_custom' } }
-      ]
+      type: 'business_list',
+      cardId: 'BUSINESS_LIST_SELECTOR',
+      title: '조건에 맞는 추천 매장입니다. 원하시는 곳을 선택해주세요.',
     };
   }
 
-  // 3. 도메인 식별 후 2턴 ➔ [반려동물 기본 제원/체급 확인 카드]
-  if (turnStep === 2) {
+  if (cardType === 'time_slot') {
     return {
-      type: 'pet_size_picker',
-      cardId: 'PET_PROFILE_SIZE_SELECTOR',
-      title: '함께하는 소중한 아이의 체급/품종을 알려주세요',
-      options: [
-        { label: '소형견 (~5kg 말티즈/포메/푸들)', value: { size: 'small', max_weight: 5 } },
-        { label: '중형견 (5~12kg 비숑/코기/시바)', value: { size: 'medium', max_weight: 12 } },
-        { label: '대형견 (12kg~ 리트리버/진도)', value: { size: 'large', max_weight: 30 } },
-        { label: '시니어 노령견 (10세 이상 안심케어)', value: { size: 'senior', is_senior: true } },
-        { label: '💡 고양이 또는 특수 반려동물', value: { special_pet: true } }
-      ]
+      type: 'time_slot_picker',
+      cardId: 'TIME_SLOT_PICKER',
+      title: '방문하실 시간을 선택해주세요.',
     };
   }
 
-  // 4. 애견미용 선택 시에만 ➔ [미용 스타일 카드] 제시
-  if (detectedDomain === 'pet_grooming') {
+  if (cardType === 'reservation_confirm') {
     return {
-      type: 'beauty_style_picker',
-      cardId: 'GROOMING_STYLE_SELECTOR',
-      title: '희망하시는 미용/스파 스타일을 선택해 주세요',
-      options: [
-        { label: '전체 가위컷 & 위생 스타일링', value: { style: 'scissor_cut' } },
-        { label: '프리미엄 탄산 스파 & 저자극 목욕', value: { style: 'spa' } },
-        { label: '기본 위생 클리핑 (3mm/5mm)', value: { style: 'clipping' } },
-        { label: '1:1 단독 룸 노령견 안심 케어', value: { private_care: true } },
-        { label: '💡 다른 미용 스타일/상담 필요', value: { custom_style: true } }
-      ]
-    };
-  }
-
-  if (detectedDomain === 'clinic') {
-    return {
-      type: 'clinic_urgency_picker',
-      cardId: 'CLINIC_URGENCY_SELECTOR',
-      title: '현재 아이의 상태와 필요한 진료를 선택해 주세요',
-      options: [
-        { label: '🚨 야간 응급 외상 / 24시 수술실 필요', value: { urgent: true } },
-        { label: '🩺 슬개골/관절 정형외과 정밀 검진', value: { department: 'orthopedics' } },
-        { label: '💉 기본 건강검진 및 예방접종', value: { routine: true } },
-        { label: '💡 기타 질환 전문의 상담', value: { other_clinic: true } }
-      ]
-    };
-  }
-
-  if (detectedDomain === 'pet_hotel') {
-    return {
-      type: 'hotel_room_picker',
-      cardId: 'HOTEL_ROOM_SELECTOR',
-      title: '희망하시는 호텔 룸 타입을 선택해 주세요',
-      options: [
-        { label: '1인 단독 방음 룸 & 24시간 관리사 상주', value: { room: 'private_soundproof' } },
-        { label: '실시간 스마트 CCTV 확인 가능 룸', value: { cctv: true } },
-        { label: '야외 천연잔디 운동장 플레이 타임', value: { playground: true } },
-        { label: '💡 장기 호텔링 (7일 이상) 상담', value: { long_term: true } }
-      ]
+      type: 'reservation_confirm',
+      cardId: 'RESERVATION_CONFIRM',
+      title: '예약 정보를 확인하고 확정해주세요.',
     };
   }
 
   return {
-    type: 'default_confirm_picker',
-    cardId: 'DEFAULT_CONFIRM_SELECTOR',
-    title: '원하시는 방문 일정과 조건을 확정해 드릴까요?',
-    options: [
-      { label: '📅 이번 주말 예약 슬롯 확인하기', value: { schedule: 'weekend' } },
-      { label: '🚗 전용 주차 완비 매장 우선 매칭', value: { parking: true } },
-      { label: '💡 다른 조건 추가하기', value: { add_condition: true } }
-    ]
+    type: 'unknown',
+    cardId: 'UNKNOWN',
+    title: '안내를 준비 중입니다.',
   };
 }
