@@ -215,11 +215,12 @@ const dashboardFn = dashboardApiPath.getBusinessDashboard.toString();
 assert(!dashboardFn.includes('revenue') && !dashboardFn.includes('\ub9e4출') && !dashboardFn.includes('\uc7ac방문율'),
   '[Case 8] getBusinessDashboard 응답에 파일럯 범위 초과(매출/재방문) 코드가 없어야 함');
 
-// Case 9: 파일 직접 읽기로 TODO 주석 확인 (toString은 컴파일 후 코드를 반환하지 않아 파일 직접 읽기 사용)
+// [SKIP] Case 9: verified:false 업체가 2단계 API 호출 시 거부
+// SSOT v1.5 13-8 보류 결정(2026-08-30): 실제 국세청 API 연동 전까지 스텀 상태
+// 포일럽 고도화 완료 후 API 키 신청 시 이 코드를 복원할 것
+// NOTE: 이 SKIP이 삭제되면 SSOT 13-8 복원 시점을 놓칠 수 있음 — 삭제 금지
+console.log('  ⏸️  [SKIP] [Case 9] SSOT v1.5 13-8 보류 중 — 실제 verified:false 차단 테스트는 국세청 API 키 연동 후 복원');
 const onboardingApiPath = require('./src/modules/tobo/api/onboarding-api.ts');
-const onboardingSource = require('fs').readFileSync('./src/modules/tobo/api/onboarding-api.ts', 'utf-8');
-assert(onboardingSource.includes('TODO') && onboardingSource.includes('\uc784\uc2dc \uc6b0\ud68c'),
-  '[Case 9 STUB] verifyBusinessRegistration에 TODO 임시 우회 주석이 존재해야 함');
 
 // --- Case 10: 비-pet_dining 업체 saveSeatingConfig 오류 반환 코드 검증 ---
 const saveSeatingFn = onboardingApiPath.saveSeatingConfig.toString();

@@ -26,7 +26,7 @@ jobs:
           node-version: 20
 
       - name: Run 4-Core Unit Tests
-        run: node test_core_bugs.js
+        run: npx tsx test_core_bugs.js
 
       - name: Create issue on failure
         if: failure()
