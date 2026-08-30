@@ -173,29 +173,12 @@ export default async function AdminSettingsPage({ searchParams }: { searchParams
           📇 질문카드 카탈로그
         </Link>
         <Link 
-          href="/admin/eval" 
-          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-amber-100 text-amber-900 hover:bg-amber-200"
-        >
-          🎯 시뮬레이션 채점
-        </Link>
-        <Link 
           href="/admin/simulation-archive" 
           className="px-4 py-2 text-sm font-bold rounded-t-lg bg-blue-600 text-white hover:bg-blue-700 shadow-xs"
         >
           📑 7대 회귀 테스트 아카이브
         </Link>
-        <Link 
-          href="/admin/conversation-cases" 
-          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-indigo-100 text-indigo-900 hover:bg-indigo-200"
-        >
-          💬 실전 대화 아카이브
-        </Link>
-        <Link 
-          href="/admin/squad-lab" 
-          className="px-4 py-2 text-sm font-bold rounded-t-lg bg-rose-100 text-rose-900 hover:bg-rose-200"
-        >
-          🏛️ 봇 군단 LAB
-        </Link>
+
         <Link 
           href="/admin/tobo-prompt-config" 
           className="px-4 py-2 text-sm font-bold rounded-t-lg bg-blue-500 text-white hover:bg-blue-600 shadow-xs flex items-center gap-1.5"

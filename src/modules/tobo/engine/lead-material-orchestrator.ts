@@ -19,13 +19,13 @@ export interface CardTemplate {
 export const CARD_TEMPLATES: CardTemplate[] = [
   { card_type: "category_select",       required_slots: [], stage: FunnelStage.GOAL_DISCOVERY, priority: 0 },
   { card_type: "region_select",         required_slots: ["category"], stage: FunnelStage.DETAIL_GATHERING, priority: 1 },
-  // 업종별 세부조건 카드 (우선순위 2 - 지역 다음)
-  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  { card_type: "style_select",          required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  // 1-b 우선순위 파악 (우선순위 3)
-  { card_type: "priority_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  // 업종별 세부조건 카드 (우선순위 3 - 지역 다음, 우선순위파악 전)
+  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  { card_type: "style_select",          required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  // 1-b 우선순위 파악 (우선순위 2 - 세부조건 이후)
+  { card_type: "priority_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
   // 매장 리스트 제안 (우선순위 4) - 세부조건과 우선순위가 파악된 후 매장 노출
   { card_type: "business_list",         required_slots: ["category", "region_hint", "priority"], stage: FunnelStage.NARROWING, priority: 4 },
   // 매장 확정 후 날짜/시간 선택 (우선순위 5, 6)
@@ -135,6 +135,74 @@ export function prepareLeadMaterial(cardType: string, category: string | null): 
       options: [
         { label: '🔔 서비스 오픈 알림 신청하기', value: { notify_agree: true } },
         { label: '💡 다른 서비스 찾아보기', value: { back_to_home: true } }
+      ]
+    };
+  }
+
+  if (cardType === 'pet_size_select') {
+    return {
+      type: 'pet_size_select_picker',
+      cardId: 'PET_SIZE_SELECTOR',
+      title: '반려동물의 체급을 알려주세요.',
+      options: [
+        { label: '🐶 소형견 (~5kg)', value: { pet_size: '소형견' } },
+        { label: '🐕 중형견 (5~15kg)', value: { pet_size: '중형견' } },
+        { label: '🦮 대형견 (15kg~)', value: { pet_size: '대형견' } },
+        { label: '🐈 고양이', value: { pet_size: '고양이' } }
+      ]
+    };
+  }
+
+  if (cardType === 'style_select') {
+    return {
+      type: 'style_select_picker',
+      cardId: 'STYLE_SELECTOR',
+      title: '원하시는 미용 스타일이 있나요?',
+      options: [
+        { label: '✂️ 전체 가위컷', value: { style: '가위컷' } },
+        { label: '🛁 기본 목욕/위생', value: { style: '목욕' } },
+        { label: '🧴 스파/피부케어', value: { style: '스파' } },
+        { label: '💬 상담 후 결정', value: { style: '상담' } }
+      ]
+    };
+  }
+
+  if (cardType === 'duration_select') {
+    return {
+      type: 'duration_select_picker',
+      cardId: 'DURATION_SELECTOR',
+      title: '숙박/돌봄 기간을 알려주세요.',
+      options: [
+        { label: '☀️ 데이케어 (반나절)', value: { duration: '데이케어' } },
+        { label: '🌙 1박 2일', value: { duration: '1박2일' } },
+        { label: '🧳 장기 숙박 (3박 이상)', value: { duration: '장기' } }
+      ]
+    };
+  }
+
+  if (cardType === 'clinic_purpose_select') {
+    return {
+      type: 'clinic_purpose_select_picker',
+      cardId: 'CLINIC_PURPOSE_SELECTOR',
+      title: '병원 방문 목적을 선택해주세요.',
+      options: [
+        { label: '💉 정기 검진/접종', value: { clinic_purpose: '검진' } },
+        { label: '🩺 일반 진료', value: { clinic_purpose: '진료' } },
+        { label: '🚨 응급/수술', value: { clinic_purpose: '응급수술' } }
+      ]
+    };
+  }
+
+  if (cardType === 'priority_select') {
+    return {
+      type: 'priority_select_picker',
+      cardId: 'PRIORITY_SELECTOR',
+      title: '예약 시 가장 중요하게 생각하시는 부분은 무엇인가요?',
+      options: [
+        { label: '💰 가성비 (저렴한 가격)', value: { priority: 'price' } },
+        { label: '🚶 가까운 거리 (도보권)', value: { priority: 'distance' } },
+        { label: '⭐ 높은 평점/전문성', value: { priority: 'rating' } },
+        { label: '⚡ 빠른 예약/진료', value: { priority: 'speed' } }
       ]
     };
   }

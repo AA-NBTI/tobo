@@ -137,6 +137,41 @@ assert(evaluateConfidenceGate(0.50, 1) === false, '신뢰도 50% AND 슬롯 1개
 
 
 // ─────────────────────────────────────────────────────────────────────
+// 5. [UI 카드 데이터 누락 방지 (prepareLeadMaterial) 단위테스트]
+// ─────────────────────────────────────────────────────────────────────
+console.log('\n▶️ [Test 5] CARD_TEMPLATES에 정의된 모든 카드가 prepareLeadMaterial에 구현되어 있는지 검증');
+const { CARD_TEMPLATES, prepareLeadMaterial } = require('./src/modules/tobo/engine/lead-material-orchestrator.ts');
+
+let missingCards = 0;
+for (const template of CARD_TEMPLATES) {
+  const generatedCard = prepareLeadMaterial(template.card_type, 'pet_grooming');
+  if (generatedCard.type === 'unknown' || generatedCard.title === '안내를 준비 중입니다.') {
+    missingCards++;
+    console.error(`   - 누락된 카드 UI 발견: [${template.card_type}]가 prepareLeadMaterial에 구현되지 않음!`);
+  }
+}
+assert(missingCards === 0, 'CARD_TEMPLATES의 모든 card_type은 prepareLeadMaterial에 UI 데이터가 정의되어야 함');
+
+// ─────────────────────────────────────────────────────────────────────
+// 6. [구형 카테고리 잔재 및 하드코딩 방지 단위테스트]
+// ─────────────────────────────────────────────────────────────────────
+console.log('\n▶️ [Test 6] 구형 카테고리 잔재 및 하드코딩된 가짜 상점명 0건 검증');
+const { execSync } = require('child_process');
+try {
+  // src 디렉토리 내에서 검색 (결과가 있으면 출력 후 실패)
+  const output = execSync('git grep -E "맛집|뷰티|운동/피트니스|몽펫샵|머라카노" -- src', { encoding: 'utf-8', stdio: 'pipe' });
+  console.error('검출된 하드코딩 잔재:\n', output);
+  assert(false, '구형 카테고리 잔재 또는 하드코딩 상점명이 코드베이스에 남아있습니다.');
+} catch (e) {
+  if (e.status === 1) {
+    // grep 결과 0건이면 exit 1 반환하므로 정상
+    assert(true, '구형 카테고리 잔재 및 하드코딩 0건 통과');
+  } else {
+    assert(false, 'git grep 명령어 실행 중 에러 발생');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
 // 종합 결과 요약
 // ─────────────────────────────────────────────────────────────────────
 console.log('\n================================================================');

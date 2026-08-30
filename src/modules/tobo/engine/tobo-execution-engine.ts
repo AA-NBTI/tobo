@@ -1,9 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { generateEnforcedAIContent } from '../../../utils/ai-core';
-import { generateEmbedding } from '../../../utils/embedding';
+import { generateEnforcedAIContent, generateEmbedding } from '../../../utils/ai-core';
 import { prepareLeadMaterial, LeadQuestionCard, selectBestCard, FunnelStage } from './lead-material-orchestrator';
 import { rankRealBusinesses } from './matching-scorer';
 import { extractSlots } from './slot-extractor';
+import { HIDDEN_NEEDS_CATALOG } from './hidden_needs_catalog';
 
 export interface ToboExecutionResult {
   reply: string;
@@ -32,7 +32,8 @@ export async function executeToboResponse(
   message: string,
   history: any[] = [],
   step: number = 1,
-  userId?: string
+  userId: string = 'anonymous',
+  contextBusinessId?: string // 새 대화 진입 시 특정 업체 문맥이 있을 경우
 ): Promise<ToboExecutionResult> {
   const currentStep = Math.max(step, (history || []).length + 1);
 
@@ -53,6 +54,40 @@ export async function executeToboResponse(
 
   // 3. 통합 의도 및 슬롯 추출 엔진 호출 (NEW ARCHITECTURE)
   const intentData = await extractSlots(message, history, supabaseAdmin);
+  const { category, target_date, target_time, region_hint, force_reshow, party_size } = intentData.slots;
+
+  // [메모리 (재방문 손님) 조회 - category가 없거나 대화 극초기일 때]
+  let recalledMemoryText = '';
+  if (userId !== 'anonymous' && message) {
+    // bot_memories 테이블의 bot_id가 UUID 타입이므로 "tobo-" 접두사를 붙일 수 없습니다.
+    // 비즈니스 ID 자체를 사용하거나, 글로벌일 경우 00000000-0000-0000-0000-000000000000 사용
+    const memoryBotId = contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000';
+    try {
+      let query = supabaseAdmin.from('bot_memories')
+        .select('*')
+        .eq('bot_id', memoryBotId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (category) {
+        query = query.ilike('content', `%[CAT:${category}]%`);
+      }
+
+      const { data: matchingMemories, error: selectErr } = await query.limit(1);
+      
+      if (selectErr) {
+        console.error(`❌ [Tobo Memory] DB 조회 실패:`, selectErr);
+      } else if (matchingMemories && matchingMemories.length > 0) {
+        // [CAT:...] 태그 제거 후 텍스트만 추출
+        const rawContent = matchingMemories[0].content;
+        const cleanContent = rawContent.replace(/ \[CAT:.*?\]/g, '').trim();
+        recalledMemoryText = cleanContent;
+        console.log(`✅ [Tobo Memory] 기억 불러오기 성공 (Exact Match): ${cleanContent}`);
+      }
+    } catch (e) {
+      console.warn("Memory retrieve failed", e);
+    }
+  }
 
   // 3-1. 하이브리드 벡터 검색 (RAG) - Cloudflare 임베딩 엔진 활용
   let businesses: any[] = [];
@@ -120,6 +155,10 @@ export async function executeToboResponse(
     if (target_date) filledSlots.add('target_date');
     if (target_time) filledSlots.add('target_time');
     if (region_hint) filledSlots.add('region_hint');
+    if (contextBusinessId) {
+      filledSlots.add('business_id');
+      filledSlots.add('priority');
+    }
 
     // 세션 상태 파싱 (루프 방지용)
     let lastShownCardType: string | null = null;
@@ -162,16 +201,51 @@ export async function executeToboResponse(
       // UI 카드 생성 (프론트에 전달될 데이터)
       leadCard = prepareLeadMaterial(cardType, category);
 
+      // [메모리 저장 - 예약 확정 단계]
+      if (cardType === 'reservation_confirm' && userId !== 'anonymous') {
+        try {
+          const summaryPrompt = `다음 대화에서 고객이 언급한 알러지, 선호 스타일 등 '특이사항'만 1문장으로 요약하세요. 없으면 '없음' 출력.\n\n대화내역:\n${history.map(h=>h.content).join('\n')}\n${message}`;
+          const summary = (await generateEnforcedAIContent(summaryPrompt, 'gemma-4-31b-it')).trim();
+          if (summary && summary !== '없음') {
+            // bot_memories 테이블의 bot_id가 UUID 타입이므로 "tobo-" 접두사를 붙일 수 없습니다.
+            const memoryBotId = filledSlots.has('business_id') ? contextBusinessId : (contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000');
+            
+            // 카테고리를 메타데이터처럼 content에 태깅하여 저장
+            const savedContent = category ? `${summary} [CAT:${category}]` : summary;
+            
+            // 임베딩은 이제 필수 조회 기준이 아니지만 테이블 스키마상 채워줌
+            const memEmbedding = await generateEmbedding(savedContent);
+            
+            const { error: insertErr } = await supabaseAdmin.from('bot_memories').insert({
+              bot_id: memoryBotId,
+              user_id: userId,
+              content: savedContent,
+              embedding: memEmbedding
+            });
+            if (insertErr) {
+              console.error(`❌ [Tobo Memory] DB 저장 실패:`, insertErr);
+            } else {
+              console.log(`✅ [Tobo Memory] 기억 저장 완료 (Exact Match 용): ${savedContent}`);
+            }
+          }
+        } catch (e) {
+          console.warn("Memory save failed", e);
+        }
+      }
+
       actionDirective = `
-[시스템 지시사항 - 매우 중요]
-현재 대화 퍼널 상태: ${FunnelStage[stage]}
+[응답 작성 지시사항]
+대화 퍼널 상태: ${FunnelStage[stage]}
 퍼널 가이드: ${stageCopy}
 
-백엔드 시스템이 이미 화면에 [${cardType}] 카드를 띄웠습니다!
-당신은 절대로 긴 텍스트로 선택지를 나열하거나 변명하지 마세요. 특히 'Draft', 'Pet-customized' 등 당신의 내부 분석 과정이나 생각을 절대로 출력에 포함하지 마세요(CoT 누수 엄격히 금지). 오직 고객에게 건네는 최종 결과물인 1~2문장의 짧고 경쾌한 안내 멘트만 출력하세요.`;
+현재 백엔드가 [${cardType}] 카드를 화면에 띄운 상태입니다.
+카드의 선택지를 텍스트로 중복 나열하지 마세요. 
+고객에게 건네는 안내 멘트만 1~2문장으로 짧게 작성하세요.
+`;
     } else {
       actionDirective = `
-[시스템 지시사항 - 매우 중요]
+[절대 규칙: 단골손님 맞춤 응답]
+${recalledMemoryText ? `이 고객은 단골입니다. 이전 대화 기록: "${recalledMemoryText}"\n당신이 작성할 응답에 반드시 이 특이사항을 아는 척하며 챙겨주는 내용(예: "지난번 말씀하신 저자극 샴푸로 준비해드릴까요?")을 포함하세요! 이 규칙이 다른 모든 지시보다 최우선입니다.\n\n` : ''}[시스템 지시사항 - 매우 중요]
 현재 대화 퍼널 상태: ${FunnelStage[stage]}
 퍼널 가이드: ${stageCopy}
 
@@ -179,10 +253,35 @@ export async function executeToboResponse(
     }
   }
 
+  // 능동 제안(숨은 니즈) 주입
+  if (intentData.detected_hidden_needs && intentData.detected_hidden_needs.length > 0) {
+    const proactiveMessages = intentData.detected_hidden_needs
+      .map(code => HIDDEN_NEEDS_CATALOG[code]?.suggestion_message)
+      .filter(Boolean);
+    if (proactiveMessages.length > 0) {
+      const proactiveText = `\n\n[능동 제안(스니펫) 지시사항]\n사용자의 발화에서 숨은 니즈가 파악되었습니다. 답변 서두에 반드시 다음 텍스트를 자연스럽게 포함하여 먼저 짚어주세요:\n"${proactiveMessages.join(' ')}"`;
+      actionDirective += proactiveText;
+    }
+  }
+
+  // 재방문 단기기억 텍스트 주입 (SHOW_CARD가 아닐 때를 대비)
+  if (recalledMemoryText && !actionDirective.includes('단골손님 기억 활용')) {
+    actionDirective += `\n[🚨 단골손님 기억 활용 🚨]\n과거 기억: "${recalledMemoryText}"\n이 기억을 반드시 응답에 자연스럽게 녹여내세요.`;
+  }
+
   // 4. 이전 대화 기록 포맷팅
   const formattedHistory = (history || [])
     .map((h: any) => `${h.role === 'user' ? '고객' : '토보'}: ${h.content}`)
     .join('\n');
+
+  let userPrompt = `
+[대화내역]
+${formattedHistory}
+고객: ${message}
+
+${actionDirective}
+
+(토보의 답변):`;
 
   // 5. 실제 Gemma 31B 모델에게 완전한 대화 자율성을 부여하되, 행동은 actionDirective로 강력히 통제
   const prompt = `${systemPrompt}
@@ -190,17 +289,19 @@ export async function executeToboResponse(
 [현재 등록된 실존 제휴 매장 데이터베이스]:
 ${availableBusinessesSummary}
 
-[이전 대화 기록]:
-${formattedHistory}
+${userPrompt}`;
 
-[고객의 현재 메시지]: "${message}"
-
-${actionDirective} (토보의 답변):`;
 
   let aiReply = '';
   try {
-    const raw = await generateEnforcedAIContent(prompt, 'gemma-4-31b-it');
-    aiReply = raw.replace(/^["']|["']$/g, '').trim();
+    aiReply = await generateEnforcedAIContent(prompt, 'gemma-4-31b-it');
+    
+    // 🔥 5.1 프로그래밍 방식의 단골손님 기억 강제 결합 (LLM 프롬프트 대신 백엔드에서 100% 삽입)
+    if (recalledMemoryText) {
+      const memoryPrefix = `지난번처럼 ${recalledMemoryText} 신경써서 준비해드릴까요?\n`;
+      aiReply = memoryPrefix + aiReply;
+    }
+    
   } catch (e: any) {
     console.error('LLM Engine Error:', e);
     aiReply = '네, 보호자님! 현재 원하시는 지역 내 등록된 제휴 매장 중 적합한 일정을 확인해 드릴게요. 편하게 말씀해 주세요. (에러: ' + e.message + ')';

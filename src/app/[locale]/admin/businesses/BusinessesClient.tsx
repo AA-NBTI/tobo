@@ -4,12 +4,11 @@ import { useState, useTransition } from 'react'
 import { createBusiness, deleteBusiness } from './actions'
 
 const CATEGORIES = [
-  { value: 'beauty', label: '💇 미용/뷰티' },
-  { value: 'restaurant', label: '🍽 음식점' },
-  { value: 'clinic', label: '🏥 의원/클리닉' },
-  { value: 'fitness', label: '💪 운동/피트니스' },
-  { value: 'education', label: '📚 교육/강습' },
-  { value: 'general', label: '🏢 기타' },
+  { value: 'pet_grooming', label: '✂️ 미용/목욕' },
+  { value: 'clinic', label: '🏥 병원/클리닉' },
+  { value: 'pet_hotel', label: '🏨 호텔/유치원' },
+  { value: 'pet_dining', label: '🍽️ 동반 식당/카페' },
+  { value: 'pet_pension', label: '🏕️ 동반 펜션' },
 ]
 
 export default function BusinessesClient({ initialData }: { initialData: any[] }) {

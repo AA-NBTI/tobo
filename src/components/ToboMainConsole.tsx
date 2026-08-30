@@ -26,10 +26,11 @@ interface Message {
 
 const CATEGORIES = [
   { id: 'all', label: '전체 상담' },
-  { id: 'beauty', label: '뷰티 / 헤어 / 펫' },
-  { id: 'restaurant', label: '맛집 / 식당 / 주점' },
-  { id: 'clinic', label: '클리닉 / 상담 / 진료' },
-  { id: 'fitness', label: '운동 / 피트니스' },
+  { id: 'pet_grooming', label: '✂️ 미용 / 목욕' },
+  { id: 'clinic', label: '🏥 병원 / 클리닉' },
+  { id: 'pet_hotel', label: '🏨 호텔 / 유치원' },
+  { id: 'pet_dining', label: '🍽️ 동반 식당/카페' },
+  { id: 'pet_pension', label: '🏕️ 동반 펜션' },
 ]
 
 export default function ToboMainConsole({ user }: { user?: any }) {
@@ -46,14 +47,21 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([])
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [editTitleInput, setEditTitleInput] = useState('')
+  const [hotBusinesses, setHotBusinesses] = useState<any[]>([])
 
   useEffect(() => {
     if (user?.id) fetchSessions()
+    fetchHotBusinesses()
   }, [user?.id])
 
   async function fetchSessions() {
     const { data } = await supabase.from('tobo_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
     if (data) setSessions(data)
+  }
+
+  async function fetchHotBusinesses() {
+    const { data } = await supabase.from('businesses').select('name, slug, category').eq('is_active', true).limit(2)
+    if (data) setHotBusinesses(data)
   }
 
   async function loadSession(sessionId: string) {
@@ -328,22 +336,17 @@ export default function ToboMainConsole({ user }: { user?: any }) {
               등록 매장 바로가기
             </div>
             <div className="space-y-1 text-xs">
-              <a
-                href="/shop/몽펫샵-mt9qp7y1"
-                target="_blank"
-                className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
-              >
-                <span className="font-medium truncate">몽펫샵 (등록매장)</span>
-                <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
-              </a>
-              <a
-                href="/shop/머라카노-mt9r4fwr"
-                target="_blank"
-                className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
-              >
-                <span className="font-medium truncate">머라카노 (부산)</span>
-                <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
-              </a>
+              {hotBusinesses.map((shop, idx) => (
+                <a
+                  key={idx}
+                  href={`/shop/${shop.slug}`}
+                  target="_blank"
+                  className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
+                >
+                  <span className="font-medium truncate">{shop.name}</span>
+                  <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -487,17 +490,19 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                         {m.cards.title}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        {m.cards.options.map((opt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleSend(opt.label)}
-                            className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer"
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                      {m.cards.options && m.cards.options.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {m.cards.options.map((opt, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSend(opt.label)}
+                              className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer"
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

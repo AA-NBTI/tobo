@@ -1,0 +1,17 @@
+{
+  "protect-ai-core": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "replace_file_content|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ./scripts/protect-ai-core.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

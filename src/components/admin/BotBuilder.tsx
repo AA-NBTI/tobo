@@ -251,11 +251,9 @@ export default function BotBuilder({ initialData, onSubmit, isPending }: BotBuil
     try {
       await onSubmit(formData)
       toast.success(initialData ? '성공적으로 저장되었습니다.' : '성공적으로 등록되었습니다.')
-      router.push(`/${locale}/admin/robot?tab=list`)
+      router.push('/admin/robot?tab=list')
       router.refresh()
     } catch (error: any) {
-
-
       toast.error(error.message || '오류가 발생했습니다.')
     }
   }

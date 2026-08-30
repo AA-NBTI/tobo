@@ -34,12 +34,11 @@ async function getBusinessBySlug(slug: string) {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  beauty: '💇 미용/뷰티',
-  restaurant: '🍽 음식점',
-  clinic: '🏥 의원/클리닉',
-  fitness: '💪 운동/피트니스',
-  education: '📚 교육/강습',
-  general: '🏢 기타',
+  pet_grooming: '✂️ 미용/목욕',
+  clinic: '🏥 병원/클리닉',
+  pet_hotel: '🏨 호텔/유치원',
+  pet_dining: '🍽️ 동반 식당/카페',
+  pet_pension: '🏕️ 동반 펜션',
 }
 
 export default async function BusinessPublicPage({ params }: { params: Promise<{ slug: string }> }) {

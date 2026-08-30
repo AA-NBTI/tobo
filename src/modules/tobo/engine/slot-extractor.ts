@@ -4,7 +4,7 @@ import { getLearnedMappingsFromDb, upsertLearnedKnowledge } from './knowledge-en
 import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface ExtractedSlots {
-  category: 'dining' | 'cafe' | 'bar' | 'hair_salon' | 'pet_service' | 'nail_beauty' | 'fitness' | 'studio' | 'accommodation' | 'clinic_human' | 'UNSUPPORTED' | null;
+  category: 'pet_grooming' | 'clinic' | 'pet_hotel' | 'pet_dining' | 'pet_pension' | 'UNSUPPORTED' | null;
   unsupported_category_raw: string | null;
   target_date: string | null;
   target_time: string | null;
@@ -16,6 +16,7 @@ export interface ExtractedSlots {
 export interface ExtractedIntent {
   slots: ExtractedSlots;
   conversation_type: 'SERVICE_REQUEST' | 'OFF_TOPIC';
+  detected_hidden_needs?: string[];
   learned_mappings?: Array<{ raw_expression: string; normalized_value: string; field_id: string; }>;
 }
 
@@ -28,7 +29,12 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
   - "OFF_TOPIC": 서비스와 무관한 인사, 잡담, 감사 표현 등.
 
 ## 필수 추출 슬롯 (slots)
-- category: 업종. 지원 업종 10개('dining', 'cafe', 'bar', 'hair_salon', 'pet_service', 'nail_beauty', 'fitness', 'studio', 'accommodation', 'clinic_human') 중 하나이거나, 전혀 다른 미지원 서비스(항공권, 대리기사 등)를 찾을 경우 "UNSUPPORTED", 모르면 null.
+- category: 업종. 지원 업종 5개('pet_grooming', 'clinic', 'pet_hotel', 'pet_dining', 'pet_pension') 중 하나이거나, 전혀 다른 미지원 서비스(항공권, 대리기사 등)를 찾을 경우 "UNSUPPORTED", 모르면 null.
+  - pet_grooming: 반려견 미용, 목욕, 스파
+  - clinic: 동물병원, 예방접종, 중성화, 수술
+  - pet_hotel: 애견호텔, 유치원, 돌봄
+  - pet_dining: 애견동반 식당, 카페
+  - pet_pension: 애견동반 펜션, 숙박
 - unsupported_category_raw: category가 "UNSUPPORTED"일 경우, 고객이 실제로 말한 서비스 명칭(예: "대리기사"). 아닐 경우 null.
 - target_date: 방문할 날짜 (예: "오늘", "내일", "11월 22일"). 모르면 null
 - target_time: 방문할 시간 (예: "14:00", "오후 2시"). 모르면 null
@@ -39,16 +45,11 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
 ## 텍스트 버튼 강제 매핑 규칙 (매우 중요)
 프론트엔드에서 카드 버튼 클릭 시 텍스트로만 전달되므로, 사용자의 입력이 아래와 일치할 경우 **반드시** 지정된 슬롯 값으로 추출하세요.
 [업종 버튼]
-- "🍽️ 맛집 / 식당" ➔ category: "dining"
-- "☕ 카페 / 디저트" ➔ category: "cafe"
-- "🍻 술집 / 이자카야" ➔ category: "bar"
-- "✂️ 미용실 / 헤어샵" ➔ category: "hair_salon"
-- "🐶 반려동물 서비스" ➔ category: "pet_service"
-- "💅 네일 / 뷰티샵" ➔ category: "nail_beauty"
-- "🏋️ 헬스 / 피트니스" ➔ category: "fitness"
-- "📸 스튜디오 / 사진관" ➔ category: "studio"
-- "🏨 숙박 / 모텔 / 호텔" ➔ category: "accommodation"
-- "🏥 병원 / 의원 (사람용)" ➔ category: "clinic_human"
+- "✂️ 강아지 미용 / 목욕" ➔ category: "pet_grooming"
+- "🏥 동물병원 / 진료" ➔ category: "clinic"
+- "🏨 애견호텔 / 유치원" ➔ category: "pet_hotel"
+- "🍽️ 애견동반 식당 / 카페" ➔ category: "pet_dining"
+- "🏕️ 애견동반 펜션 / 풀빌라" ➔ category: "pet_pension"
 - "💡 다른 서비스 찾기" ➔ category: "UNSUPPORTED"
 
 [지역 버튼]
@@ -71,15 +72,15 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
   "conversation_type": "OFF_TOPIC"
 }
 
-입력: "내일 2시에 고기집 예약할게요"
+입력: "내일 2시에 애견동반 식당 예약할게요"
 출력: {
-  "slots": {"category": "dining", "target_date": "내일", "target_time": "14:00", "party_size": null, "region_hint": null, "force_reshow": false},
+  "slots": {"category": "pet_dining", "target_date": "내일", "target_time": "14:00", "party_size": null, "region_hint": null, "force_reshow": false},
   "conversation_type": "SERVICE_REQUEST"
 }
 
 입력: "거기 주차 되나요?" (진행 중인 예약 대화)
 출력: {
-  "slots": {"category": "dining", "target_date": "내일", "target_time": "14:00", "party_size": null, "region_hint": null, "force_reshow": false},
+  "slots": {"category": "pet_dining", "target_date": "내일", "target_time": "14:00", "party_size": null, "region_hint": null, "force_reshow": false},
   "conversation_type": "SERVICE_REQUEST"
 }
 
@@ -102,6 +103,12 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
 고객이 명백한 축약어, 오타, 비문(예: "낼" -> "내일", "3시데" -> "3시", "강남역 스벅" -> "강남역 스타벅스")을 사용하여 슬롯을 도출한 경우, 
 앞으로 시스템이 이 표현을 학습할 수 있도록 learned_mappings 배열에 추가하세요.
 
+[숨은 니즈(능동 제안) 규칙]
+고객의 발화에서 다음과 같은 숨은 니즈 키워드가 감지되면 detected_hidden_needs 배열에 담아주세요. 없으면 빈 배열 []을 출력하세요.
+- "pickup": 다리 불편, 뚜벅이, 차량 필요 등
+- "senior_care": 노령견, 나이가 많음, 심장 등 지병
+- "allergy_care": 눈물, 피부 예민, 알러지 등
+
 반드시 아래 JSON 포맷으로만 응답하세요. 백틱(\`\`\`)이나 다른 설명은 절대 넣지 마세요.
 {
   "slots": {
@@ -114,6 +121,7 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
     "force_reshow": ...
   },
   "conversation_type": "SERVICE_REQUEST",
+  "detected_hidden_needs": ["pickup"],
   "learned_mappings": [
     { "raw_expression": "낼", "normalized_value": "내일", "field_id": "target_date" }
   ]
@@ -170,9 +178,16 @@ ${formattedHistory}
       }
     }
     
+    const validCategories = ['pet_grooming', 'clinic', 'pet_hotel', 'pet_dining', 'pet_pension', 'UNSUPPORTED'];
+    let extractedCategory = parsed.slots?.category || null;
+    if (extractedCategory && !validCategories.includes(extractedCategory)) {
+      console.warn(`[스키마 위반 차단] 허용되지 않은 카테고리: ${extractedCategory}`);
+      extractedCategory = null;
+    }
+    
     return {
       slots: {
-        category: parsed.slots?.category || null,
+        category: extractedCategory,
         unsupported_category_raw: parsed.slots?.unsupported_category_raw || null,
         target_date: parsed.slots?.target_date || null,
         target_time: parsed.slots?.target_time || null,
@@ -181,13 +196,15 @@ ${formattedHistory}
         force_reshow: !!parsed.slots?.force_reshow,
       },
       conversation_type: parsed.conversation_type === 'OFF_TOPIC' ? 'OFF_TOPIC' : 'SERVICE_REQUEST',
+      detected_hidden_needs: parsed.detected_hidden_needs || [],
     };
   } catch (e) {
     console.error("Slot Extraction Failed:", e);
     // Fallback
     return {
       slots: { category: null, unsupported_category_raw: null, target_date: null, target_time: null, party_size: null, region_hint: null, force_reshow: false },
-      conversation_type: 'OFF_TOPIC'
+      conversation_type: 'OFF_TOPIC',
+      detected_hidden_needs: []
     };
   }
 }
