@@ -34,8 +34,8 @@ async function runSequential10Cases() {
       const latency = Date.now() - start;
       
       console.log(`Tobo: ${response.reply}`);
-      if (response.cards && response.cards.options && response.cards.options.length > 0) {
-        console.log(`Cards: [${response.cards.type}] ${response.cards.options.map((o:any)=>o.label).join(', ')}`);
+      if (response.card && response.card.options && response.card.options.length > 0) {
+        console.log(`Cards: [${response.card.type}] ${response.card.options.map((o:any)=>o.label).join(', ')}`);
       }
       console.log(`Latency: ${latency}ms`);
     } catch (e: any) {

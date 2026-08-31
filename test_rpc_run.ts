@@ -20,6 +20,7 @@ async function runTest() {
     console.log(`[0. learned_mappings 보유 데이터 수 확인]`);
     console.log(`SELECT count(*) FROM public.learned_mappings; -> ${learnedCount}개\n`);
   }
+  const messageEmbedding = await generateEmbedding(message);
   if (!messageEmbedding) {
     console.log("임베딩 실패");
     return;
