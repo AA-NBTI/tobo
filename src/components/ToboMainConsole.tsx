@@ -252,8 +252,12 @@ export default function ToboMainConsole({ user }: { user?: any }) {
       return
     }
 
-    // 다른 서비스 찾기 / back_to_home 클릭 시 수기 입력창으로 포커스 안내
-    if (selectedValue?.back_to_home || selectedValue?.manual_input) {
+    // 다른 서비스 찾기 / UNSUPPORTED / back_to_home 클릭 시 수기 입력창으로 즉시 안내 및 포커스
+    if (
+      selectedValue?.category === 'UNSUPPORTED' ||
+      selectedValue?.back_to_home ||
+      selectedValue?.manual_input
+    ) {
       const userBubbleText = explicitLabel || selectedValue?.label || '💡 다른 서비스 직접 입력'
       setMessages(prev => [
         ...prev,
@@ -567,46 +571,46 @@ export default function ToboMainConsole({ user }: { user?: any }) {
               <div className="w-full max-w-xl bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-xs space-y-3 text-left">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-teal-500" />
-                    ⚡ 빠른 맞춤 예약 (카테고리 선택)
+                    <span className="w-2 h-2 rounded-full bg-[#0f172a]" />
+                    ⚡ 빠른 맞춤 예약
                   </span>
-                  <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-semibold">
-                    즉시 반응
+                  <span className="text-[10px] text-[#475569] bg-[#f1f5f9] px-2 py-0.5 rounded-full font-medium">
+                    원클릭 진행
                   </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'pet_grooming', label: '✂️ 미용/목욕' })}
+                    onClick={() => handleCardClick('category_select', { category: 'pet_grooming', label: '✂️ 미용/목욕' }, '✂️ 미용/목욕')}
                     className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>✂️</span> <span>미용/목욕</span>
                   </button>
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'clinic', label: '🏥 동물병원' })}
+                    onClick={() => handleCardClick('category_select', { category: 'clinic', label: '🏥 동물병원' }, '🏥 동물병원')}
                     className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🏥</span> <span>동물병원</span>
                   </button>
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'pet_hotel', label: '🏨 호텔/유치원' })}
+                    onClick={() => handleCardClick('category_select', { category: 'pet_hotel', label: '🏨 호텔/유치원' }, '🏨 호텔/유치원')}
                     className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🏨</span> <span>호텔/유치원</span>
                   </button>
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'pet_dining', label: '🍽️ 동반 식당/카페' })}
+                    onClick={() => handleCardClick('category_select', { category: 'pet_dining', label: '🍽️ 동반 식당/카페' }, '🍽️ 동반 식당/카페')}
                     className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🍽️</span> <span>동반 식당</span>
                   </button>
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'pet_pension', label: '🏕️ 동반 펜션' })}
+                    onClick={() => handleCardClick('category_select', { category: 'pet_pension', label: '🏕️ 동반 펜션' }, '🏕️ 동반 펜션')}
                     className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>🏕️</span> <span>동반 펜션</span>
                   </button>
                   <button
-                    onClick={() => handleCardClick('category_select', { category: 'UNSUPPORTED', label: '💡 다른 서비스' })}
+                    onClick={() => handleCardClick('category_select', { category: 'UNSUPPORTED', label: '💡 다른 서비스' }, '💡 다른 서비스')}
                     className="p-3 text-xs font-semibold text-left text-[#64748b] bg-[#f8fafc] hover:bg-[#e2e8f0] border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
                   >
                     <span>💡</span> <span>기타 서비스</span>
@@ -614,25 +618,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                 </div>
               </div>
 
-              {/* ── 2. 사장님 매장 등록 바로가기 배너 ── */}
-              <div className="w-full max-w-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs text-left flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
-                    <span>🏪 사장님이신가요?</span>
-                  </div>
-                  <p className="text-[11px] text-amber-700 mt-0.5">
-                    간단한 대화로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
-                  </p>
-                </div>
-                <a
-                  href="/ko/register"
-                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shrink-0 shadow-xs active:scale-95"
-                >
-                  매장 등록하기 →
-                </a>
-              </div>
-
-              {/* ── 3. 자유 질문/상담 텍스트 입력창 ── */}
+              {/* ── 2. 자유 질문/상담 텍스트 입력창 (메인 중앙) ── */}
               <div className="w-full max-w-xl mt-1">
                 <div className="text-[11px] font-semibold text-[#64748b] text-left mb-1.5 flex items-center gap-1">
                   <span>💬 직접 상담/질문하기 (AI 자유 대화)</span>
@@ -672,6 +658,24 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                     </svg>
                   </button>
                 </form>
+              </div>
+
+              {/* ── 3. 사장님 매장 등록 바로가기 배너 (대화창 아래쪽 배치 & 컬러 제거) ── */}
+              <div className="w-full max-w-xl bg-white border border-[#e2e8f0] rounded-2xl p-3.5 text-left flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[#0f172a]">
+                    🏪 사장님이신가요?
+                  </div>
+                  <p className="text-[11px] text-[#64748b] mt-0.5">
+                    간단한 대화로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
+                  </p>
+                </div>
+                <a
+                  href="/ko/register"
+                  className="px-3 py-1.5 bg-[#f1f5f9] hover:bg-[#0f172a] text-[#0f172a] hover:text-white border border-[#cbd5e1] rounded-xl text-xs font-semibold transition shrink-0 active:scale-95"
+                >
+                  매장 등록하기 →
+                </a>
               </div>
             </div>
           ) : (
