@@ -26,6 +26,15 @@ const STEP_LABELS: Record<number, string> = {
   5: '등록 완료',
 }
 
+const CATEGORIES = [
+  { id: 'all', label: '전체 상담' },
+  { id: 'pet_grooming', label: '✂️ 미용 / 목욕' },
+  { id: 'clinic', label: '🏥 병원 / 클리닉' },
+  { id: 'pet_hotel', label: '🏨 호텔 / 유치원' },
+  { id: 'pet_dining', label: '🍽️ 동반 식당/카페' },
+  { id: 'pet_pension', label: '🏕️ 동반 펜션' },
+]
+
 export default function RegisterPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -34,8 +43,23 @@ export default function RegisterPage() {
   const [collected, setCollected] = useState<Record<string, any>>({})
   const [selectedServices, setSelectedServices] = useState<any[]>([])
   const [done, setDone] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [hotBusinesses, setHotBusinesses] = useState<any[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUser(user)
+    })
+    fetchHotBusinesses()
+  }, [])
+
+  async function fetchHotBusinesses() {
+    const { data } = await supabase.from('businesses').select('name, slug, category').eq('is_active', true).limit(2)
+    if (data) setHotBusinesses(data)
+  }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -224,15 +248,75 @@ export default function RegisterPage() {
               ))}
             </div>
           </div>
+
+          {/* 카테고리 퀵 메뉴 */}
+          <div>
+            <div className="text-[11px] font-semibold text-[#64748b] px-2 mb-1.5 uppercase tracking-wider">
+              카테고리
+            </div>
+            <div className="space-y-0.5">
+              {CATEGORIES.map(cat => (
+                <a
+                  key={cat.id}
+                  href="/ko"
+                  className="w-full flex items-center px-3 py-2 rounded-xl text-xs font-medium transition text-left text-[#475569] hover:bg-[#e2e8f0]/60"
+                >
+                  <span>{cat.label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* 등록 매장 바로가기 */}
+          <div>
+            <div className="text-[11px] font-semibold text-[#64748b] px-2 mb-1.5 uppercase tracking-wider">
+              등록 매장 바로가기
+            </div>
+            <div className="space-y-1 text-xs">
+              {hotBusinesses.map((shop, idx) => (
+                <a
+                  key={idx}
+                  href={`/shop/${shop.slug}`}
+                  target="_blank"
+                  className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
+                >
+                  <span className="font-medium truncate">{shop.name}</span>
+                  <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* 좌측 최하단 홈 및 관리자 링크 */}
+        {/* 좌측 최하단: 관리자 설정 및 로그인 버튼 */}
         <div className="border-t border-[#e2e8f0] pt-3 text-xs space-y-2">
+          {!user ? (
+            <a
+              href="/ko/login"
+              className="w-full flex items-center justify-center px-3 py-2 text-white bg-[#0f172a] rounded-xl hover:bg-[#1e293b] transition font-medium shadow-sm"
+            >
+              로그인 후 대화 저장하기
+            </a>
+          ) : (
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.reload()
+              }}
+              className="w-full flex items-center justify-between px-3 py-1.5 text-[#475569] bg-[#e2e8f0]/40 hover:bg-[#e2e8f0] rounded-lg transition border border-[#e2e8f0]/60 active:scale-98"
+              title="로그아웃"
+            >
+              <span className="text-[10px] font-semibold truncate flex-1 text-left">
+                {user.email || '회원 인증됨'}
+              </span>
+              <span className="text-[10px] text-[#64748b] ml-2">로그아웃</span>
+            </button>
+          )}
           <a
-            href="/ko"
+            href="/ko/admin"
             className="w-full flex items-center justify-between px-3 py-2 text-[#475569] hover:text-[#0f172a] rounded-xl hover:bg-white transition border border-transparent hover:border-[#e2e8f0] shadow-2xs font-medium"
           >
-            <span>🏠 토보 메인 홈</span>
+            <span>⚙️ 관리자 설정</span>
             <span className="text-[11px] text-[#94a3b8]">→</span>
           </a>
         </div>

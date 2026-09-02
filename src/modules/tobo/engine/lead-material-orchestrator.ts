@@ -14,15 +14,16 @@ export interface CardTemplate {
   required_slots: string[];
   stage: FunnelStage;
   priority: number;
+  applicable_categories?: string[]; // 해당 업종에만 적용되는 카드
 }
 
 export const CARD_TEMPLATES: CardTemplate[] = [
   { card_type: "category_select",       required_slots: [], stage: FunnelStage.GOAL_DISCOVERY, priority: 0 },
   { card_type: "region_select",         required_slots: ["category"], stage: FunnelStage.DETAIL_GATHERING, priority: 1 },
   // 1-c 업종별 세부조건 카드 (우선순위 2 - 지역 다음)
-  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2, applicable_categories: ["pet_grooming", "pet_hotel"] },
+  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2, applicable_categories: ["pet_hotel"] },
+  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2, applicable_categories: ["clinic"] },
   // 1-d 우선순위 파악 (우선순위 3 - 세부조건 완료 후)
   { card_type: "priority_select",       required_slots: ["category", "region_hint", "detail_gathered"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
   // 1-e 매장 리스트 제안 (우선순위 4 - 세부조건과 우선순위 파악 후)
@@ -63,10 +64,15 @@ export function selectBestCard(
     return { cardType: "unmet_notification", stage: FunnelStage.GOAL_DISCOVERY, action: "SHOW_CARD" };
   }
 
-  // 2. 정상 퍼널 매칭
-  const eligible = CARD_TEMPLATES.filter(t => 
-    t.required_slots.every(s => filledSlots.has(s))
-  );
+  // 2. 정상 퍼널 매칭 (required_slots 만족 + applicable_categories 매칭)
+  const eligible = CARD_TEMPLATES.filter(t => {
+    const slotsMatch = t.required_slots.every(s => filledSlots.has(s));
+    if (!slotsMatch) return false;
+    if (t.applicable_categories && category) {
+      return t.applicable_categories.includes(category);
+    }
+    return true;
+  });
   const best = eligible.sort((a, b) => b.priority - a.priority)[0];
 
   if (!best) {
