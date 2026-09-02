@@ -1,14 +1,14 @@
 /**
- * 🏪 업체 사장님 AI 상담형 등록 페이지 — SSOT §13
- * /ko/register (또는 /en/register)
+ * 🏪 업체 사장님 매장 등록 페이지
+ * /ko/register
  *
- * 손님 예약 화면과 동일한 카드+텍스트 구조.
- * 카드 클릭 → /api/owner-onboarding (Zero LLM step-machine)
- * 텍스트 입력 → /api/owner-onboarding (LLM 기본정보 추출)
+ * 메인 대화창(ToboMainConsole)의 레이아웃, 사이드바, UI 테마, 카드+대화 구조를 100% 동일하게 공유
  */
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { createClient } from '@/utils/supabase/client'
+import pkg from '../../../../package.json'
 
 interface Message {
   id: string
@@ -35,6 +35,7 @@ export default function RegisterPage() {
   const [selectedServices, setSelectedServices] = useState<any[]>([])
   const [done, setDone] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -78,10 +79,10 @@ export default function RegisterPage() {
     if (data.onboardingStatus === 'pending_review') setDone(true)
   }
 
-  // ── 카드 클릭 (결정론적) ──────────────────────────────────────
-  async function handleCardClick(value: any) {
+  // ── 카드 클릭 ──────────────────────────────────────────────
+  async function handleCardClick(value: any, labelText?: string) {
     if (isLoading) return
-    const label = getLabel(value)
+    const label = labelText || getLabel(value)
 
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
@@ -151,7 +152,7 @@ export default function RegisterPage() {
     if (value?.category) return categoryLabel(value.category)
     if (value?.open) return `${value.open} ~ ${value.close}`
     if (value?.agreed) return '✅ 모두 동의하고 등록 신청'
-    return JSON.stringify(value)
+    return '선택 완료'
   }
 
   function categoryLabel(cat: string): string {
@@ -165,197 +166,294 @@ export default function RegisterPage() {
     return MAP[cat] || cat
   }
 
-  const lastCard = [...messages].reverse().find(m => m.role === 'assistant' && m.card)?.card
-
-  if (done) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-emerald-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl shadow-xl p-10 max-w-md w-full text-center space-y-5">
-          <div className="text-6xl">🎉</div>
-          <h1 className="text-2xl font-bold text-gray-900">등록 신청 완료!</h1>
-          <p className="text-gray-500 leading-relaxed">
-            업체 정보가 제출되었어요. 관리자 검수(1~2 영업일) 후 서비스에 노출됩니다.
-          </p>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            <strong>상태:</strong> 검토 대기 중 (pending_review)
+  return (
+    <div className="flex h-screen w-full bg-[#f8fafc] text-[#1e293b] overflow-hidden font-sans select-none">
+      {/* ── 좌측 사이드바 (메인 화면과 동일한 스타일) ── */}
+      <aside className="w-64 bg-[#f1f5f9] border-r border-[#e2e8f0] hidden md:flex flex-col justify-between p-3.5 shrink-0">
+        <div className="space-y-5">
+          {/* toboai 로고 & 버전 */}
+          <div className="flex items-center justify-between px-2 pt-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#0f172a] text-white flex items-center justify-center font-black text-lg">
+                T
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base tracking-tight text-[#0f172a] leading-none">
+                  toboai
+                </span>
+                <span className="text-[10px] text-[#64748b] font-medium tracking-wide">
+                  사장님 온보딩
+                </span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 bg-[#0f172a] text-white rounded-full shadow-xs">
+              V{pkg.version}
+            </span>
           </div>
-          <a href="/ko" className="block px-6 py-3 bg-gray-900 text-white rounded-xl text-sm font-semibold hover:bg-gray-800 transition">
-            토보 홈으로 →
+
+          {/* 손님 예약 화면으로 돌아가기 */}
+          <a
+            href="/ko"
+            className="w-full flex items-center gap-2 py-2 px-3 bg-white hover:bg-[#ffffff] text-[#0f172a] rounded-xl text-xs font-semibold border border-[#e2e8f0] shadow-sm transition active:scale-98"
+          >
+            <span>← 손님 예약 홈으로 이동</span>
+          </a>
+
+          {/* 등록 단계 표시 */}
+          <div className="bg-white/80 border border-[#e2e8f0] rounded-2xl p-3.5 space-y-2.5">
+            <div className="text-[11px] font-bold text-[#0f172a]">
+              진행 단계 ({Math.min(currentStep + 1, 5)}/5)
+            </div>
+            <div className="space-y-1.5 text-xs">
+              {[0, 1, 2, 3, 4].map(s => (
+                <div
+                  key={s}
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg font-medium transition ${
+                    s < currentStep
+                      ? 'text-teal-700 bg-teal-50 font-semibold'
+                      : s === currentStep
+                      ? 'text-[#0f172a] bg-[#e2e8f0] font-bold'
+                      : 'text-[#94a3b8]'
+                  }`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${
+                    s < currentStep ? 'bg-teal-500' : s === currentStep ? 'bg-[#0f172a]' : 'bg-[#cbd5e1]'
+                  }`} />
+                  <span>{STEP_LABELS[s]}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* 좌측 최하단 홈 및 관리자 링크 */}
+        <div className="border-t border-[#e2e8f0] pt-3 text-xs space-y-2">
+          <a
+            href="/ko"
+            className="w-full flex items-center justify-between px-3 py-2 text-[#475569] hover:text-[#0f172a] rounded-xl hover:bg-white transition border border-transparent hover:border-[#e2e8f0] shadow-2xs font-medium"
+          >
+            <span>🏠 토보 메인 홈</span>
+            <span className="text-[11px] text-[#94a3b8]">→</span>
           </a>
         </div>
-      </div>
-    )
-  }
+      </aside>
 
-  return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
-      {/* 헤더 */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gray-900 text-white flex items-center justify-center font-black text-base">T</div>
-          <div>
-            <div className="font-bold text-sm text-gray-900">업체 등록 상담</div>
-            <div className="text-[10px] text-gray-400">SSOT §13 AI 상담형 등록</div>
-          </div>
-        </div>
-        {/* 진행 단계 표시 */}
-        <div className="flex items-center gap-1.5">
-          {[0,1,2,3,4].map(s => (
-            <div
-              key={s}
-              className={`w-6 h-1.5 rounded-full transition-all ${
-                s < currentStep ? 'bg-teal-500' :
-                s === currentStep ? 'bg-gray-900' : 'bg-gray-200'
-              }`}
-              title={STEP_LABELS[s]}
-            />
-          ))}
-        </div>
-      </header>
-
-      {/* 대화 영역 */}
-      <main className="flex-1 overflow-y-auto p-4 md:p-8 max-w-2xl mx-auto w-full space-y-4">
-        {messages.map(m => (
-          <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'} space-y-2`}>
-            {/* 버블 */}
-            <div className={`max-w-sm px-4 py-3 rounded-2xl text-sm leading-relaxed ${
-              m.role === 'user'
-                ? 'bg-gray-900 text-white rounded-br-sm'
-                : 'bg-white border border-gray-100 text-gray-800 rounded-bl-sm shadow-sm'
-            }`}>
-              {m.content}
+      {/* ── 중앙/우측 대화창 영역 ── */}
+      <main className="flex-1 flex flex-col justify-between bg-[#f8fafc] overflow-hidden relative h-full">
+        {/* 모바일 상단 헤더 */}
+        <div className="md:hidden flex items-center justify-between px-4 py-3 bg-[#f1f5f9] border-b border-[#e2e8f0]">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-[#0f172a] text-white flex items-center justify-center font-black text-xs">
+              T
             </div>
+            <span className="font-bold text-sm text-[#0f172a]">사장님 매장 등록</span>
+          </div>
+          <a
+            href="/ko"
+            className="text-xs font-semibold text-[#0f172a] px-2.5 py-1 bg-white rounded-lg border border-[#e2e8f0]"
+          >
+            홈으로
+          </a>
+        </div>
 
-            {/* 카드 렌더링 */}
-            {m.role === 'assistant' && m.card && (
-              <div className="w-full max-w-sm bg-white border border-gray-100 rounded-2xl shadow-sm p-4 space-y-3">
-                <div className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-teal-500 inline-block" />
-                  {m.card.title}
+        {/* 대화 타임라인 */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-8 space-y-6 max-w-3xl w-full mx-auto select-text flex flex-col">
+          {done ? (
+            <div className="my-auto flex flex-col items-center justify-center text-center space-y-4 px-4 w-full py-8">
+              <div className="w-16 h-16 rounded-3xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center font-bold text-3xl shadow-sm">
+                🎉
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-xl md:text-2xl font-bold text-[#0f172a]">매장 등록 신청 완료!</h2>
+                <p className="text-xs md:text-sm text-[#64748b] max-w-md leading-relaxed">
+                  작성해 주신 매장 정보가 정상적으로 접수되었습니다. 관리자 확인 후 즉시 손님 예약 목록에 노출됩니다.
+                </p>
+              </div>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-800 font-semibold">
+                ⏳ 상태: 검토 대기 중 (확인 후 자동 노출)
+              </div>
+              <a
+                href="/ko"
+                className="mt-3 px-6 py-2.5 bg-[#0f172a] text-white rounded-xl text-xs font-bold hover:bg-[#1e293b] transition shadow-xs"
+              >
+                메인 홈으로 이동하기 →
+              </a>
+            </div>
+          ) : (
+            messages.map(m => (
+              <div key={m.id} className="flex flex-col space-y-2">
+                {/* 발신자 라벨 */}
+                <div className="flex items-center gap-2">
+                  <div className={`w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold ${
+                    m.role === 'user' ? 'bg-[#cbd5e1] text-[#0f172a]' : 'bg-[#0f172a] text-white'
+                  }`}>
+                    {m.role === 'user' ? 'U' : 'T'}
+                  </div>
+                  <span className="text-xs font-semibold text-[#64748b]">
+                    {m.role === 'user' ? '사장님' : 'Tobo'}
+                  </span>
                 </div>
 
-                {/* 카테고리/시간/약관 단순 선택 카드 */}
-                {m.card.options && m.card.type !== 'owner_service_catalog' && (
-                  <div className="grid grid-cols-1 gap-2">
-                    {m.card.options.map((opt: any, i: number) => (
-                      <button
-                        key={i}
-                        id={`card-option-${m.card.cardId}-${i}`}
-                        onClick={() => handleCardClick(opt.value)}
-                        disabled={isLoading || currentStep > (messages.indexOf(m))}
-                        className="px-4 py-2.5 text-sm text-left font-medium bg-gray-50 hover:bg-gray-900 hover:text-white border border-gray-200 rounded-xl transition active:scale-95 disabled:opacity-30"
-                      >
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                {/* 본문 텍스트 */}
+                <div className="text-xs text-[#1e293b] leading-relaxed pl-7 whitespace-pre-wrap font-normal">
+                  {m.content}
+                </div>
 
-                {/* 서비스 카탈로그 — 다중 선택 */}
-                {m.card.type === 'owner_service_catalog' && m.card.options && (
-                  <div className="space-y-2">
-                    {m.card.options.map((opt: any, i: number) => (
-                      <label key={i} className="flex items-start gap-3 p-2.5 bg-gray-50 rounded-xl cursor-pointer hover:bg-teal-50 transition">
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 w-4 h-4 rounded text-teal-600 focus:ring-teal-400"
-                          checked={selectedServices.some((s: any) => s.presetId === opt.value.presetId)}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setSelectedServices(prev => [...prev, opt.value])
-                            } else {
-                              setSelectedServices(prev => prev.filter((s: any) => s.presetId !== opt.value.presetId))
-                            }
-                          }}
-                        />
-                        <span className="text-xs text-gray-700 leading-relaxed">{opt.label}</span>
-                      </label>
-                    ))}
-                    {selectedServices.length > 0 && (
-                      <button
-                        onClick={handleServicesSubmit}
-                        disabled={isLoading}
-                        className="w-full py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition disabled:opacity-40"
-                      >
-                        {selectedServices.length}개 서비스 선택 완료 →
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* 기본정보 폼 */}
-                {m.card.type === 'owner_basic_info' && m.card.fields && (
-                  <form onSubmit={handleBasicInfoSubmit} className="space-y-3">
-                    {m.card.fields.map((f: any) => (
-                      <div key={f.name}>
-                        <label className="block text-[11px] font-medium text-gray-500 mb-1">
-                          {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </label>
-                        <input
-                          name={f.name}
-                          placeholder={f.placeholder}
-                          required={f.required}
-                          defaultValue={collected[f.name] || ''}
-                          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-300 bg-gray-50"
-                        />
+                {/* 상황별 선택 카드 */}
+                {m.card && (
+                  <div className="pl-7 pt-2">
+                    <div className="p-3.5 bg-white border border-[#e2e8f0] rounded-2xl shadow-xs space-y-2.5 max-w-lg">
+                      <div className="text-xs font-semibold text-[#0f172a] flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
+                        {m.card.title}
                       </div>
-                    ))}
-                    <button
-                      type="submit"
-                      disabled={isLoading}
-                      className="w-full py-2.5 bg-gray-900 text-white text-sm font-semibold rounded-xl hover:bg-gray-800 transition disabled:opacity-40"
-                    >
-                      {isLoading ? '확인 중...' : '기본 정보 제출 →'}
-                    </button>
-                  </form>
+
+                      {/* 단순 선택 카드 */}
+                      {m.card.options && m.card.type !== 'owner_service_catalog' && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {m.card.options.map((opt: any, idx: number) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleCardClick(opt.value, opt.label)}
+                              disabled={isLoading}
+                              className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer disabled:opacity-40"
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 서비스 다중 선택 */}
+                      {m.card.type === 'owner_service_catalog' && m.card.options && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-1 gap-1.5">
+                            {m.card.options.map((opt: any, idx: number) => {
+                              const isChecked = selectedServices.some((s: any) => s.presetId === opt.value.presetId)
+                              return (
+                                <label
+                                  key={idx}
+                                  className={`flex items-start gap-2.5 p-2.5 rounded-xl border cursor-pointer transition text-xs ${
+                                    isChecked
+                                      ? 'bg-teal-50 border-teal-300 text-teal-900 font-medium'
+                                      : 'bg-[#f8fafc] border-[#e2e8f0] text-[#334155] hover:bg-white'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="mt-0.5 rounded border-gray-300 text-[#0f172a] focus:ring-0"
+                                    checked={isChecked}
+                                    onChange={e => {
+                                      if (e.target.checked) {
+                                        setSelectedServices(prev => [...prev, opt.value])
+                                      } else {
+                                        setSelectedServices(prev => prev.filter((s: any) => s.presetId !== opt.value.presetId))
+                                      }
+                                    }}
+                                  />
+                                  <span className="flex-1">{opt.label}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                          {selectedServices.length > 0 && (
+                            <button
+                              onClick={handleServicesSubmit}
+                              disabled={isLoading}
+                              className="w-full py-2 bg-[#0f172a] text-white text-xs font-semibold rounded-xl hover:bg-[#1e293b] transition disabled:opacity-40 shadow-xs"
+                            >
+                              {selectedServices.length}개 서비스 선택 완료 →
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 기본 정보 폼 */}
+                      {m.card.type === 'owner_basic_info' && m.card.fields && (
+                        <form onSubmit={handleBasicInfoSubmit} className="space-y-2.5">
+                          {m.card.fields.map((f: any) => (
+                            <div key={f.name}>
+                              <label className="block text-[11px] font-semibold text-[#475569] mb-1">
+                                {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                              </label>
+                              <input
+                                name={f.name}
+                                placeholder={f.placeholder}
+                                required={f.required}
+                                defaultValue={collected[f.name] || ''}
+                                className="w-full border border-[#cbd5e1] rounded-xl px-3 py-1.5 text-xs focus:outline-none focus:border-[#0f172a] bg-white"
+                              />
+                            </div>
+                          ))}
+                          <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-2 bg-[#0f172a] text-white text-xs font-semibold rounded-xl hover:bg-[#1e293b] transition disabled:opacity-40 shadow-xs mt-2"
+                          >
+                            {isLoading ? '저장 중...' : '기본 정보 제출 →'}
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        ))}
+            ))
+          )}
 
-        {/* 로딩 */}
-        {isLoading && (
-          <div className="flex items-start space-x-2">
-            <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-              <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
-              </div>
+          {isLoading && (
+            <div className="flex items-center gap-2 pl-7">
+              <span className="w-2 h-2 rounded-full bg-[#0f172a] animate-ping" />
+              <span className="text-xs text-[#64748b]">처리 중...</span>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* ── 하단 입력창 ── */}
+        {!done && (
+          <div className="p-3 md:p-6 max-w-3xl w-full mx-auto bg-[#f8fafc]">
+            <form
+              onSubmit={e => {
+                e.preventDefault()
+                handleTextSend()
+              }}
+              className="flex items-center gap-2 bg-white border border-[#cbd5e1] focus-within:border-[#0f172a] rounded-2xl px-4 py-2.5 shadow-2xs transition"
+            >
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleTextSend()
+                  }
+                }}
+                rows={1}
+                placeholder="카드를 클릭하거나 매장 정보를 직접 입력하세요... (Shift+Enter 줄바꿈)"
+                disabled={isLoading}
+                className="flex-1 resize-none text-xs text-[#0f172a] bg-transparent focus:outline-none placeholder-[#94a3b8] py-1 max-h-32 overflow-y-auto"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="p-1.5 bg-[#0f172a] text-white rounded-xl hover:bg-[#1e293b] disabled:opacity-20 transition shrink-0"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </button>
+            </form>
+            <div className="text-center mt-2">
+              <span className="text-[10px] text-[#64748b]">
+                버튼을 누르시면 단계별로 빠르게 안내되며, 직접 입력하셔도 돼요 😊
+              </span>
             </div>
           </div>
         )}
-
-        <div ref={messagesEndRef} />
       </main>
-
-      {/* 하단 텍스트 입력창 — 항상 노출 */}
-      <div className="sticky bottom-0 bg-[#f8fafc] border-t border-gray-100 p-4 max-w-2xl mx-auto w-full">
-        <div className="flex items-center gap-2 bg-white border border-gray-200 focus-within:border-gray-900 rounded-2xl px-4 py-3 shadow-sm transition">
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') handleTextSend() }}
-            placeholder="카드를 클릭하거나 직접 입력하세요..."
-            disabled={isLoading}
-            className="flex-1 text-sm bg-transparent focus:outline-none placeholder-gray-400 text-gray-900 disabled:opacity-40"
-          />
-          <button
-            onClick={handleTextSend}
-            disabled={!input.trim() || isLoading}
-            className="p-2 bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-20 transition"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </button>
-        </div>
-        <p className="text-center text-[10px] text-gray-400 mt-2">
-          카드 클릭 시 즉시 반응 · 텍스트로 직접 입력도 가능해요
-        </p>
-      </div>
     </div>
   )
 }

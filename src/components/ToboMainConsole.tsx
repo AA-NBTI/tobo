@@ -208,8 +208,42 @@ export default function ToboMainConsole({ user }: { user?: any }) {
     })
   }
 
+  // 선택지 값에서 사용자에게 보여줄 친절한 텍스트 추출 함수
+  function getDisplayLabel(val: any): string {
+    if (!val) return ''
+    if (typeof val === 'string') return val
+    if (val.label) return val.label
+    if (val.region_hint) return `📍 ${val.region_hint}`
+    if (val.pet_size) return `🐶 ${val.pet_size}`
+    if (val.style) return `✂️ ${val.style}`
+    if (val.priority) {
+      const pMap: Record<string, string> = {
+        price: '💰 가성비 (저렴한 가격)',
+        distance: '🚶 가까운 거리 (도보권)',
+        rating: '⭐ 높은 평점/전문성',
+        speed: '⚡ 빠른 예약/진료',
+      }
+      return pMap[val.priority] || val.priority
+    }
+    if (val.target_date) return `🗓️ ${val.target_date}`
+    if (val.target_time) return `🕐 ${val.target_time}`
+    if (val.category) {
+      const cMap: Record<string, string> = {
+        pet_grooming: '✂️ 미용/목욕',
+        clinic: '🏥 동물병원',
+        pet_hotel: '🏨 호텔/유치원',
+        pet_dining: '🍽️ 동반 식당/카페',
+        pet_pension: '🏕️ 동반 펜션',
+        UNSUPPORTED: '💡 다른 서비스 찾기',
+      }
+      return cMap[val.category] || val.category
+    }
+    if (val.name) return val.name
+    return '선택 완료'
+  }
+
   // ─── [카드 클릭 경로] /api/tobo-card-action — Zero LLM, 즉시 반응 ───
-  async function handleCardClick(cardType: string, selectedValue: any) {
+  async function handleCardClick(cardType: string, selectedValue: any, explicitLabel?: string) {
     if (isCardPending) return
 
     // open_url 속성이 있는 경우(예: 사장님 등록 화면 바로가기) 즉시 해당 페이지로 이동
@@ -218,13 +252,31 @@ export default function ToboMainConsole({ user }: { user?: any }) {
       return
     }
 
+    // 다른 서비스 찾기 / back_to_home 클릭 시 수기 입력창으로 포커스 안내
+    if (selectedValue?.back_to_home || selectedValue?.manual_input) {
+      const userBubbleText = explicitLabel || selectedValue?.label || '💡 다른 서비스 직접 입력'
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString(), role: 'user', content: userBubbleText },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '찾으시는 서비스나 매장 조건을 아래 입력창에 편하게 말씀해 주세요! ✍️ 토보가 맞춤으로 찾아드릴게요.',
+        }
+      ])
+      setTimeout(() => {
+        inputRef.current?.focus()
+      }, 100)
+      return
+    }
+
     setIsCardPending(true)
 
-    // 선택 표시 — 사용자 버블
+    // 선택 표시 — 사용자 친절 라벨로 버블 출력 (JSON 코드 노출 방지)
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: selectedValue?.label || JSON.stringify(selectedValue),
+      content: explicitLabel || selectedValue?.label || getDisplayLabel(selectedValue),
     }
     setMessages(prev => [...prev, userMsg])
 
@@ -247,12 +299,10 @@ export default function ToboMainConsole({ user }: { user?: any }) {
       if (data.updatedSlots) setCurrentSlots(data.updatedSlots)
       if (data.card?.type) setLastShownCardType(data.card.type)
 
-      const elapsedTag = data.elapsedMs != null ? ` ⚡${data.elapsedMs}ms` : ''
-
       const botMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.reply + elapsedTag,
+        content: data.reply,
         cards: data.card,
         recommendationList: data.recommendationList,
       }
@@ -569,10 +619,9 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                 <div>
                   <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
                     <span>🏪 사장님이신가요?</span>
-                    <span className="text-[10px] bg-amber-200/80 text-amber-900 px-1.5 py-0.2 rounded-md font-semibold">SSOT §13</span>
                   </div>
                   <p className="text-[11px] text-amber-700 mt-0.5">
-                    토보 AI 온보딩으로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
+                    간단한 대화로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
                   </p>
                 </div>
                 <a
@@ -658,7 +707,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                           {m.cards.options.map((opt, idx) => (
                             <button
                               key={idx}
-                              onClick={() => handleCardClick(m.cards!.type, opt.value ?? { label: opt.label })}
+                              onClick={() => handleCardClick(m.cards!.type, opt.value, opt.label)}
                               disabled={isCardPending}
                               className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer disabled:opacity-40"
                             >
@@ -792,7 +841,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
             </form>
             <div className="text-center mt-2">
               <span className="text-[10px] text-[#64748b]">
-                카드 클릭 시 LLM 없이 즉시 반응 · 텍스트 입력 시 AI 상담
+                버튼을 누르시면 빠르게 진행되며, 원하시는 내용을 직접 입력하셔도 돼요 😊
               </span>
             </div>
           </div>
