@@ -19,18 +19,18 @@ export interface CardTemplate {
 export const CARD_TEMPLATES: CardTemplate[] = [
   { card_type: "category_select",       required_slots: [], stage: FunnelStage.GOAL_DISCOVERY, priority: 0 },
   { card_type: "region_select",         required_slots: ["category"], stage: FunnelStage.DETAIL_GATHERING, priority: 1 },
-  // 업종별 세부조건 카드 (우선순위 3 - 지역 다음, 우선순위파악 전)
-  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
-  { card_type: "style_select",          required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
-  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
-  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
-  // 1-b 우선순위 파악 (우선순위 2 - 세부조건 이후)
-  { card_type: "priority_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
-  // 매장 리스트 제안 (우선순위 4) - 세부조건과 우선순위가 파악된 후 매장 노출
+  // 1-c 업종별 세부조건 카드 (우선순위 2 - 지역 다음)
+  { card_type: "pet_size_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "duration_select",       required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  { card_type: "clinic_purpose_select", required_slots: ["category", "region_hint"], stage: FunnelStage.DETAIL_GATHERING, priority: 2 },
+  // 1-d 우선순위 파악 (우선순위 3 - 세부조건 완료 후)
+  { card_type: "priority_select",       required_slots: ["category", "region_hint", "detail_gathered"], stage: FunnelStage.DETAIL_GATHERING, priority: 3 },
+  // 1-e 매장 리스트 제안 (우선순위 4 - 세부조건과 우선순위 파악 후)
   { card_type: "business_list",         required_slots: ["category", "region_hint", "priority"], stage: FunnelStage.NARROWING, priority: 4 },
-  // 매장 확정 후 날짜/시간 선택 (우선순위 5, 6)
+  // 1-f 날짜 / 시간 선택 (우선순위 5, 6)
   { card_type: "date_select",           required_slots: ["category", "region_hint", "business_id"], stage: FunnelStage.NARROWING, priority: 5 },
   { card_type: "time_slot",             required_slots: ["category", "region_hint", "business_id", "target_date"], stage: FunnelStage.NARROWING, priority: 6 },
+  // 1-g 예약 확정 (우선순위 7)
   { card_type: "reservation_confirm",   required_slots: ["category", "region_hint", "business_id", "target_date", "target_time"], stage: FunnelStage.CONFIRMATION, priority: 7 },
 ];
 
@@ -236,4 +236,72 @@ export function prepareLeadMaterial(cardType: string, category: string | null): 
     cardId: 'UNKNOWN',
     title: '안내를 준비 중입니다.',
   };
+}
+
+// ─────────────────────────────────────────────────────────────
+// 🔒 공유 슬롯 유틸 — 카드 경로와 텍스트 경로가 반드시 이 함수만 사용할 것.
+//    절대 각자 독립적으로 Set/Object를 구성하면 안 됨.
+// ─────────────────────────────────────────────────────────────
+
+export type SlotMap = {
+  category?: string | null;
+  region_hint?: string | null;
+  pet_size?: string | null;
+  style?: string | null;
+  priority?: string | null;
+  duration?: string | null;
+  clinic_purpose?: string | null;
+  target_date?: string | null;
+  target_time?: string | null;
+  business_id?: string | null;
+  business_name?: string | null;
+  party_size?: string | null;
+  [key: string]: any;
+};
+
+/**
+ * SlotMap → Set<string> 변환 (단일 진실의 원천).
+ * detail_gathered 도 여기서 자동 판별.
+ */
+export function buildFilledSlots(slots: SlotMap): Set<string> {
+  const s = new Set<string>();
+  if (slots.category)       s.add('category');
+  if (slots.region_hint)    s.add('region_hint');
+  if (slots.pet_size)       s.add('pet_size');
+  if (slots.style)          s.add('style');
+  if (slots.priority)       s.add('priority');
+  if (slots.duration)       s.add('duration');
+  if (slots.clinic_purpose) s.add('clinic_purpose');
+  if (slots.target_date)    s.add('target_date');
+  if (slots.target_time)    s.add('target_time');
+  if (slots.business_id)    s.add('business_id');
+  if (computeDetailGathered(slots)) s.add('detail_gathered');
+  return s;
+}
+
+/**
+ * 슬롯 머지 — 기존 슬롯에 신규 클릭값(또는 LLM 추출값)을 덮어씀.
+ * null/undefined 값은 기존값을 유지.
+ */
+export function mergeSlots(existing: SlotMap, incoming: SlotMap): SlotMap {
+  const merged = { ...existing };
+  for (const [k, v] of Object.entries(incoming)) {
+    if (v !== null && v !== undefined && v !== '') {
+      merged[k] = v;
+    }
+  }
+  return merged;
+}
+
+/**
+ * 업종별 세부조건 충족 여부 계산 (결정론적 코드).
+ */
+export function computeDetailGathered(slots: SlotMap): boolean {
+  const { category, pet_size, style, duration, clinic_purpose, region_hint } = slots;
+  if (category === 'pet_grooming') return !!(pet_size || style);
+  if (category === 'pet_hotel')    return !!(duration || pet_size);
+  if (category === 'clinic')       return !!clinic_purpose;
+  if (category === 'pet_dining')   return !!region_hint;
+  if (category === 'pet_pension')  return !!region_hint;
+  return !!region_hint;
 }

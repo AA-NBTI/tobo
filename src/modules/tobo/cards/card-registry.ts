@@ -7,8 +7,8 @@ export interface QuestionCard {
 }
 
 export const QUESTION_CARDS = {
-  BEAUTY_STYLE: {
-    type: 'beauty_style_picker',
+  GROOMING_STYLE: {
+    type: 'grooming_style_picker',
     title: '어떤 케어 프로그램을 희망하시나요?',
     options: [
       { label: '전체 가위컷 & 스타일링', value: { style: 'scissor_cut' } },
@@ -70,7 +70,7 @@ export function selectQuestionCard(message: string, step: number): QuestionCard 
 
   // 1단계: 첫 질문 / 탐색 동의 시 케어 스타일 카드
   if (step === 1 && !lower.includes('소형') && !lower.includes('중형') && !lower.includes('대형') && !lower.includes('가위') && !lower.includes('스파') && !lower.includes('클리핑') && !lower.includes('노령')) {
-    return QUESTION_CARDS.BEAUTY_STYLE
+    return QUESTION_CARDS.GROOMING_STYLE
   }
 
   // 2단계: 서비스 스타일이 정해졌거나 언급되었을 때 -> 체급/견종 카드

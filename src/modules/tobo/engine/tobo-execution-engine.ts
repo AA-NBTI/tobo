@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { generateEnforcedAIContent, generateEmbedding } from '../../../utils/ai-core';
-import { prepareLeadMaterial, LeadQuestionCard, selectBestCard, FunnelStage } from './lead-material-orchestrator';
+import { prepareLeadMaterial, LeadQuestionCard, selectBestCard, FunnelStage, buildFilledSlots, mergeSlots } from './lead-material-orchestrator';
 import { rankRealBusinesses } from './matching-scorer';
 import { extractSlots } from './slot-extractor';
 import { HIDDEN_NEEDS_CATALOG } from './hidden_needs_catalog';
@@ -122,10 +122,7 @@ export async function executeToboResponse(
     if (intentData.slots.category && intentData.slots.category !== 'UNSUPPORTED') {
       query = query.eq('category', intentData.slots.category);
     }
-    if (intentData.slots.region_hint) {
-      query = query.like('region', `%${intentData.slots.region_hint}%`);
-    }
-    const { data: fallbackBusinesses } = await query.limit(5);
+    const { data: fallbackBusinesses } = await query.limit(10);
     businesses = fallbackBusinesses || [];
   }
 
@@ -134,6 +131,7 @@ export async function executeToboResponse(
     .join('\n');
 
   let leadCard: LeadQuestionCard | undefined = undefined;
+  let recommendationList: any[] = [];
   let actionDirective = '';
 
   const STAGE_COPY_GUIDE: Record<FunnelStage, string> = {
@@ -148,18 +146,34 @@ export async function executeToboResponse(
     actionDirective = `[시스템 지시사항] 사용자가 예약이나 서비스 요청이 아닌 일반적인 대화(인사, 잡담 등)를 하고 있습니다. 서비스 제안이나 질문 없이, 맥락에 맞추어 유연하고 자연스럽게 스몰토크에 응답하고 공감해주세요.`;
   } else {
     // SERVICE_REQUEST: 다중 카드 및 퍼널 알고리즘 적용
-    const { category, target_date, target_time, region_hint } = intentData.slots;
+    const {
+      category,
+      target_date,
+      target_time,
+      region_hint,
+      pet_size,
+      style,
+      priority,
+      duration,
+      clinic_purpose,
+      business_id
+    } = intentData.slots;
     
-    // 채워진 슬롯 Set 생성
-    const filledSlots = new Set<string>();
-    if (category) filledSlots.add('category');
-    if (target_date) filledSlots.add('target_date');
-    if (target_time) filledSlots.add('target_time');
-    if (region_hint) filledSlots.add('region_hint');
-    if (contextBusinessId) {
-      filledSlots.add('business_id');
-      filledSlots.add('priority');
-    }
+    // 🔒 공유 buildFilledSlots() 사용 — 직접 Set 구성 금지
+    const filledSlots = buildFilledSlots({
+      category,
+      region_hint,
+      pet_size,
+      style,
+      priority,
+      duration,
+      clinic_purpose,
+      target_date,
+      target_time,
+      business_id: business_id || contextBusinessId || null,
+    });
+
+    // ℹ️ detail_gathered는 buildFilledSlots() 내부의 computeDetailGathered()에서 자동 처리됨
 
     // 세션 상태 파싱 (루프 방지용)
     let lastShownCardType: string | null = null;
@@ -174,6 +188,10 @@ export async function executeToboResponse(
           lastShownCardType = 'category_select';
         } else if (content.includes('어느 지역의 매장을 찾으시나요?')) {
           lastShownCardType = 'region_select';
+        } else if (content.includes('반려동물의 체급을 알려주세요.')) {
+          lastShownCardType = 'pet_size_select';
+        } else if (content.includes('예약 시 가장 중요하게 생각하시는 부분은')) {
+          lastShownCardType = 'priority_select';
         } else if (content.includes('방문 원하시는 날짜를 선택해 주세요.')) {
           lastShownCardType = 'date_select';
         }
@@ -202,19 +220,31 @@ export async function executeToboResponse(
       // UI 카드 생성 (프론트에 전달될 데이터)
       leadCard = prepareLeadMaterial(cardType, category);
 
+      // 매장 추천 단계일 경우 매장 리스트 스코어링 & 전달
+      if (cardType === 'business_list') {
+        const priorityLabelMap: Record<string, string> = {
+          price: '가격',
+          distance: '거리',
+          rating: '전문성',
+          speed: '빠른진료'
+        };
+        recommendationList = rankRealBusinesses(businesses, {
+          target_category: (category && category !== 'UNSUPPORTED') ? category : 'pet_grooming',
+          preferred_region: region_hint || undefined,
+          pet_size: pet_size || undefined,
+          priority_select: priority ? (priorityLabelMap[priority] || priority) : undefined
+        });
+      }
+
       // [메모리 저장 - 예약 확정 단계]
       if (cardType === 'reservation_confirm' && userId !== 'anonymous') {
         try {
           const summaryPrompt = `다음 대화에서 고객이 언급한 알러지, 선호 스타일 등 '특이사항'만 1문장으로 요약하세요. 없으면 '없음' 출력.\n\n대화내역:\n${history.map(h=>h.content).join('\n')}\n${message}`;
           const summary = (await generateEnforcedAIContent(summaryPrompt, 'gemma-4-31b-it')).trim();
           if (summary && summary !== '없음') {
-            // bot_memories 테이블의 bot_id가 UUID 타입이므로 "tobo-" 접두사를 붙일 수 없습니다.
-            const memoryBotId = filledSlots.has('business_id') ? contextBusinessId : (contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000');
+            const memoryBotId = filledSlots.has('business_id') ? (business_id || contextBusinessId || '00000000-0000-0000-0000-000000000000') : (contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000');
             
-            // 카테고리를 메타데이터처럼 content에 태깅하여 저장
             const savedContent = category ? `${summary} [CAT:${category}]` : summary;
-            
-            // 임베딩은 이제 필수 조회 기준이 아니지만 테이블 스키마상 채워줌
             const memEmbedding = await generateEmbedding(savedContent);
             
             const { error: insertErr } = await supabaseAdmin.from('bot_memories').insert({
@@ -234,14 +264,28 @@ export async function executeToboResponse(
         }
       }
 
-      actionDirective = `
-[응답 작성 지시사항]
-대화 퍼널 상태: ${FunnelStage[stage]}
-퍼널 가이드: ${stageCopy}
+      const CARD_GUIDE_MAP: Record<string, string> = {
+        category_select: "고객에게 어떤 서비스를 찾으시는지 아래 보기에서 골라달라고 1문장으로 친절히 안내하세요.",
+        region_select: "고객에게 어느 지역의 매장을 찾으시는지 아래 보기에서 선택해달라고 1문장으로 안내하세요.",
+        pet_size_select: "고객에게 아이의 체급/크기를 선택해달라고 1문장으로 안내하세요. (절대 날짜나 시간을 먼저 묻지 마세요!)",
+        style_select: "고객에게 원하시는 미용 스타일을 선택해달라고 1문장으로 안내하세요.",
+        duration_select: "고객에게 숙박/돌봄 기간을 선택해달라고 1문장으로 안내하세요.",
+        clinic_purpose_select: "고객에게 병원 방문 목적을 선택해달라고 1문장으로 안내하세요.",
+        priority_select: "고객에게 예약 시 가장 중요하게 생각하시는 기준(가격, 거리, 평점, 속도 등)을 아래 보기에서 골라달라고 1문장으로 안내하세요.",
+        business_list: "고객의 조건에 딱 맞는 추천 매장 목록을 준비했다고 안내하며, 마음에 드는 매장을 선택해보시라고 1문장으로 안내하세요.",
+        date_select: "고객에게 방문을 희망하시는 날짜를 선택해달라고 1문장으로 안내하세요.",
+        time_slot: "고객에게 방문을 희망하시는 시간을 선택해달라고 1문장으로 안내하세요.",
+        reservation_confirm: "선택하신 예약 정보를 확인하시고 예약을 확정해달라고 1문장으로 안내하세요.",
+        unmet_notification: "아직 준비 중인 서비스임을 정중히 양해 구하고, 오픈 알림을 받아보실지 1문장으로 안내하세요."
+      };
 
-현재 백엔드가 [${cardType}] 카드를 화면에 띄운 상태입니다.
-카드의 선택지를 텍스트로 중복 나열하지 마세요. 
-고객에게 건네는 안내 멘트만 1~2문장으로 짧게 작성하세요.
+      actionDirective = `
+[응답 작성 지시사항 (필수 준수)]
+대화 퍼널 상태: ${FunnelStage[stage]}
+현재 화면에 표시된 질문 카드: [${cardType}]
+작성 가이드: ${CARD_GUIDE_MAP[cardType] || '화면의 카드를 선택하도록 1문장으로 친절히 안내하세요.'}
+
+⚠️ 주의: 카드의 선택지 내용을 텍스트로 중복 나열하지 마세요. 화면 카드 질문과 다른 엉뚱한 정보(날짜, 가격 등)를 미리 묻지 마세요!
 `;
     } else {
       actionDirective = `
@@ -311,6 +355,7 @@ ${userPrompt}`;
   return {
     reply: aiReply,
     card: leadCard,
+    recommendationList,
     isUnmet: false,
     step: currentStep + 1
   };
