@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect, useTransition } from 'react'
 import { createClient } from '@/utils/supabase/client'
 
+import pkg from '../../package.json'
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
@@ -26,11 +28,20 @@ interface Message {
 
 const CATEGORIES = [
   { id: 'all', label: '전체 상담' },
-  { id: 'beauty', label: '뷰티 / 헤어 / 펫' },
-  { id: 'restaurant', label: '맛집 / 식당 / 주점' },
-  { id: 'clinic', label: '클리닉 / 상담 / 진료' },
-  { id: 'fitness', label: '운동 / 피트니스' },
+  { id: 'pet_grooming', label: '✂️ 미용 / 목욕' },
+  { id: 'clinic', label: '🏥 병원 / 클리닉' },
+  { id: 'pet_hotel', label: '🏨 호텔 / 유치원' },
+  { id: 'pet_dining', label: '🍽️ 동반 식당/카페' },
+  { id: 'pet_pension', label: '🏕️ 동반 펜션' },
 ]
+
+const CATEGORY_LABEL_MAP: Record<string, string> = {
+  pet_grooming: '✂️ 애견미용/목욕',
+  clinic: '🏥 동물병원/진료',
+  pet_hotel: '🏨 애견호텔/유치원',
+  pet_dining: '🍽️ 동반 식당/카페',
+  pet_pension: '🏕️ 동반 펜션',
+}
 
 export default function ToboMainConsole({ user }: { user?: any }) {
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -40,20 +51,32 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   const [input, setInput] = useState('')
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const [isPending, startTransition] = useTransition()
+  // 카드 클릭 전용 로딩 (Zero LLM — 빠른 응답이므로 별도 상태)
+  const [isCardPending, setIsCardPending] = useState(false)
+  // 🔒 카드 경로 슬롯 저장소 — tobo-card-action과 공유하는 단일 진실의 원천
+  const [currentSlots, setCurrentSlots] = useState<Record<string, any>>({})
+  const [lastShownCardType, setLastShownCardType] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const supabase = createClient()
 
   const [selectedSessionIds, setSelectedSessionIds] = useState<string[]>([])
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
   const [editTitleInput, setEditTitleInput] = useState('')
+  const [hotBusinesses, setHotBusinesses] = useState<any[]>([])
 
   useEffect(() => {
     if (user?.id) fetchSessions()
+    fetchHotBusinesses()
   }, [user?.id])
 
   async function fetchSessions() {
     const { data } = await supabase.from('tobo_sessions').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
     if (data) setSessions(data)
+  }
+
+  async function fetchHotBusinesses() {
+    const { data } = await supabase.from('businesses').select('name, slug, category').eq('is_active', true).limit(2)
+    if (data) setHotBusinesses(data)
   }
 
   async function loadSession(sessionId: string) {
@@ -120,6 +143,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
     element.style.height = `${Math.min(element.scrollHeight, 128)}px` // max-h-32 (128px)
   }
 
+  // ─── [텍스트 경로] /api/tobo-chat — LLM 사용, 능동제안/재방문기억 포함 ───
   async function handleSend(textToSend?: string) {
     const messageContent = (textToSend || input).trim()
     if (!messageContent || isPending) return
@@ -156,7 +180,6 @@ export default function ToboMainConsole({ user }: { user?: any }) {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || '오류 발생')
 
-        // 새로 생성된 세션 ID 수신 시 세션 목록 갱신 (ChatGPT/클로드 스타일)
         if (data.session_id && !currentSessionId) {
           setCurrentSessionId(data.session_id)
           const newSessionObj = {
@@ -179,14 +202,173 @@ export default function ToboMainConsole({ user }: { user?: any }) {
       } catch (err: any) {
         setMessages(prev => [
           ...prev,
-          {
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: '죄송합니다. 잠시 후 다시 말씀해 주시면 바로 이어갈게요.',
-          }
+          { id: Date.now().toString(), role: 'assistant', content: '죄송합니다. 잠시 후 다시 말씀해 주시면 바로 이어갈게요.' }
         ])
       }
     })
+  }
+
+  // 선택지 값에서 사용자에게 보여줄 친절한 텍스트 추출 함수
+  function getDisplayLabel(val: any): string {
+    if (!val) return ''
+    if (typeof val === 'string') return val
+    if (val.label) return val.label
+    if (val.region_hint) return `📍 ${val.region_hint}`
+    if (val.pet_size) return `🐶 ${val.pet_size}`
+    if (val.style) return `✂️ ${val.style}`
+    if (val.priority) {
+      const pMap: Record<string, string> = {
+        price: '💰 가성비 (저렴한 가격)',
+        distance: '🚶 가까운 거리 (도보권)',
+        rating: '⭐ 높은 평점/전문성',
+        speed: '⚡ 빠른 예약/진료',
+      }
+      return pMap[val.priority] || val.priority
+    }
+    if (val.target_date) return `🗓️ ${val.target_date}`
+    if (val.target_time) return `🕐 ${val.target_time}`
+    if (val.category) {
+      const cMap: Record<string, string> = {
+        pet_grooming: '✂️ 미용/목욕',
+        clinic: '🏥 동물병원',
+        pet_hotel: '🏨 호텔/유치원',
+        pet_dining: '🍽️ 동반 식당/카페',
+        pet_pension: '🏕️ 동반 펜션',
+        UNSUPPORTED: '💡 다른 서비스 찾기',
+      }
+      return cMap[val.category] || val.category
+    }
+    if (val.name) return val.name
+    return '선택 완료'
+  }
+
+  // ─── [카드 클릭 경로] /api/tobo-card-action — Zero LLM, 즉시 반응 ───
+  async function handleCardClick(cardType: string, selectedValue: any, explicitLabel?: string) {
+    if (isCardPending) return
+
+    // open_url 속성이 있는 경우(예: 사장님 등록 화면 바로가기)
+    // 페이지 이동 대신 현재 대화창에서 바로 사장님 등록 온보딩 시작
+    if (selectedValue?.open_url === '/ko/register' || selectedValue?.start_owner_onboarding) {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString(), role: 'user', content: '🏪 사장님 매장 등록 시작하기' },
+      ])
+      setIsCardPending(true)
+      try {
+        const res = await fetch('/api/owner-onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 0, message: '', collected: {} }),
+        })
+        const data = await res.json()
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: data.reply,
+            cards: data.card,
+          }
+        ])
+      } catch (err) {
+        setMessages(prev => [
+          ...prev,
+          { id: Date.now().toString(), role: 'assistant', content: '사장님 온보딩 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }
+        ])
+      } finally {
+        setIsCardPending(false)
+      }
+      return
+    } else if (selectedValue?.open_url) {
+      window.location.href = selectedValue.open_url
+      return
+    }
+
+    // 다른 서비스 찾기 / UNSUPPORTED / back_to_home 클릭 시 수기 입력창으로 즉시 안내 및 확실한 포커스 보장
+    if (
+      selectedValue?.category === 'UNSUPPORTED' ||
+      selectedValue?.back_to_home ||
+      selectedValue?.manual_input
+    ) {
+      const userBubbleText = explicitLabel || selectedValue?.label || '💡 다른 서비스 직접 입력'
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString(), role: 'user', content: userBubbleText },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: '찾으시는 서비스나 매장 조건을 아래 입력창에 편하게 말씀해 주세요! ✍️ 토보가 맞춤으로 찾아드릴게요.',
+        }
+      ])
+      // 화면이 empty-state에서 active-chat으로 전환되는 타이밍을 완벽히 맞추기 위해 2단계 포커스
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus()
+            inputRef.current.select()
+          }
+        }, 50)
+      })
+      return
+    }
+
+    setIsCardPending(true)
+
+    // 선택 표시 — 사용자 친절 라벨로 버블 출력 (JSON 코드 노출 방지)
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: explicitLabel || selectedValue?.label || getDisplayLabel(selectedValue),
+    }
+    setMessages(prev => [...prev, userMsg])
+
+    try {
+      const res = await fetch('/api/tobo-card-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cardType,
+          selectedValue,
+          currentSlots,
+          lastShownCardType,
+          userId: user?.id || 'anonymous',
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '오류')
+
+      // 슬롯 업데이트 (단일 진실의 원천)
+      if (data.updatedSlots) setCurrentSlots(data.updatedSlots)
+      if (data.card?.type) setLastShownCardType(data.card.type)
+
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.reply,
+        cards: data.card,
+        recommendationList: data.recommendationList,
+      }
+      setMessages(prev => [...prev, botMsg])
+
+      // 예약 완료 알림
+      if (data.reservationId) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: `🎉 예약이 완료됐어요! (예약 ID: ${data.reservationId.slice(0, 8)}...)`,
+        }])
+        // 예약 완료 후 슬롯 초기화
+        setCurrentSlots({})
+        setLastShownCardType(null)
+      }
+    } catch (err: any) {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString(), role: 'assistant', content: '일시적 오류입니다. 잠시 후 다시 시도해 주세요.' }
+      ])
+    } finally {
+      setIsCardPending(false)
+    }
   }
 
   return (
@@ -194,19 +376,24 @@ export default function ToboMainConsole({ user }: { user?: any }) {
       {/* ── 좌측 쿨그레이 사이드바 ── */}
       <aside className="w-64 bg-[#f1f5f9] border-r border-[#e2e8f0] hidden md:flex flex-col justify-between p-3.5 shrink-0">
         <div className="space-y-5">
-          {/* toboai 흑백 로고 */}
-          <div className="flex items-center gap-2.5 px-2 pt-1">
-            <div className="w-8 h-8 rounded-xl bg-[#0f172a] text-white flex items-center justify-center font-black text-lg">
-              T
+          {/* toboai 흑백 로고 & 버전 */}
+          <div className="flex items-center justify-between px-2 pt-1">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-[#0f172a] text-white flex items-center justify-center font-black text-lg">
+                T
+              </div>
+              <div className="flex flex-col">
+                <span className="font-bold text-base tracking-tight text-[#0f172a] leading-none">
+                  toboai
+                </span>
+                <span className="text-[10px] text-[#64748b] font-medium tracking-wide">
+                  AI 컨시어지
+                </span>
+              </div>
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-base tracking-tight text-[#0f172a] leading-none">
-                toboai
-              </span>
-              <span className="text-[10px] text-[#64748b] font-medium tracking-wide">
-                AI 컨시어지
-              </span>
-            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 bg-[#0f172a] text-white rounded-full shadow-xs">
+              V{pkg.version}
+            </span>
           </div>
 
           {/* 새 대화 시작 버튼 */}
@@ -328,22 +515,17 @@ export default function ToboMainConsole({ user }: { user?: any }) {
               등록 매장 바로가기
             </div>
             <div className="space-y-1 text-xs">
-              <a
-                href="/shop/몽펫샵-mt9qp7y1"
-                target="_blank"
-                className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
-              >
-                <span className="font-medium truncate">몽펫샵 (등록매장)</span>
-                <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
-              </a>
-              <a
-                href="/shop/머라카노-mt9r4fwr"
-                target="_blank"
-                className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
-              >
-                <span className="font-medium truncate">머라카노 (부산)</span>
-                <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
-              </a>
+              {hotBusinesses.map((shop, idx) => (
+                <a
+                  key={idx}
+                  href={`/shop/${shop.slug}`}
+                  target="_blank"
+                  className="flex items-center justify-between px-3 py-2 bg-white/70 hover:bg-white rounded-xl border border-[#e2e8f0]/60 text-[#334155] transition"
+                >
+                  <span className="font-medium truncate">{shop.name}</span>
+                  <span className="text-[10px] text-[#64748b] font-semibold">Shop</span>
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -391,6 +573,9 @@ export default function ToboMainConsole({ user }: { user?: any }) {
               T
             </div>
             <span className="font-bold text-sm text-[#0f172a]">toboai</span>
+            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-[#0f172a] text-white rounded-full">
+              V{pkg.version}
+            </span>
           </div>
           <button
             onClick={() => {
@@ -406,22 +591,76 @@ export default function ToboMainConsole({ user }: { user?: any }) {
         {/* 대화 타임라인 및 클로드 스타일 중앙 뷰 */}
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-8 space-y-6 max-w-3xl w-full mx-auto select-text flex flex-col">
           {messages.length === 0 ? (
-            /* 빈 화면 중앙 클로드 스타일 뷰 (타이틀 바로 아래 입력창 배치) */
-            <div className="my-auto flex flex-col items-center justify-center text-center space-y-5 px-4 w-full">
+            /* 빈 화면: 대화 시작 전 기본 선택 카드(빠른 예약 / 사장님 등록) 및 입력창 제시 */
+            <div className="my-auto flex flex-col items-center justify-center text-center space-y-6 px-4 w-full py-4">
               <div className="w-12 h-12 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center font-bold text-xl shadow-xs">
                 T
               </div>
               <div className="space-y-1">
                 <h2 className="text-xl md:text-2xl font-bold text-[#0f172a] tracking-tight">
-                  예약을 도와드릴까요?
+                  원하시는 서비스를 선택해주세요
                 </h2>
                 <p className="text-xs md:text-sm text-[#64748b] max-w-md leading-relaxed">
-                  궁금한 점이나 찾으시는 로컬 매장, 예약에 대해 편하게 대화해 보세요.
+                  카드를 클릭하시면 AI 대기 없이 1초 안에 바로 예약이 진행됩니다.
                 </p>
               </div>
 
-              {/* 중앙 대화 입력창 (메시지 없을 때 클로드처럼 중앙에 밀착) */}
-              <div className="w-full max-w-xl mt-2">
+              {/* ── 1. 빠른 맞춤 예약 카드 (Zero-LLM 카드 클릭 경로) ── */}
+              <div className="w-full max-w-xl bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-xs space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#0f172a]" />
+                    ⚡ 빠른 맞춤 예약
+                  </span>
+                  <span className="text-[10px] text-[#475569] bg-[#f1f5f9] px-2 py-0.5 rounded-full font-medium">
+                    원클릭 진행
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_grooming', label: '✂️ 미용/목욕' }, '✂️ 미용/목욕')}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>✂️</span> <span>미용/목욕</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'clinic', label: '🏥 동물병원' }, '🏥 동물병원')}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏥</span> <span>동물병원</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_hotel', label: '🏨 호텔/유치원' }, '🏨 호텔/유치원')}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏨</span> <span>호텔/유치원</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_dining', label: '🍽️ 동반 식당/카페' }, '🍽️ 동반 식당/카페')}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🍽️</span> <span>동반 식당</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_pension', label: '🏕️ 동반 펜션' }, '🏕️ 동반 펜션')}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏕️</span> <span>동반 펜션</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'UNSUPPORTED', label: '💡 다른 서비스' }, '💡 다른 서비스')}
+                    className="p-3 text-xs font-semibold text-left text-[#64748b] bg-[#f8fafc] hover:bg-[#e2e8f0] border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>💡</span> <span>기타 서비스</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── 2. 자유 질문/상담 텍스트 입력창 (메인 중앙) ── */}
+              <div className="w-full max-w-xl mt-1">
+                <div className="text-[11px] font-semibold text-[#64748b] text-left mb-1.5 flex items-center gap-1">
+                  <span>💬 직접 상담/질문하기 (AI 자유 대화)</span>
+                </div>
                 <form
                   onSubmit={e => {
                     e.preventDefault()
@@ -443,7 +682,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                       }
                     }}
                     rows={1}
-                    placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+                    placeholder="원하시는 조건이나 궁금한 점을 자유롭게 입력하세요... (Shift+Enter 줄바꿈)"
                     readOnly={isPending}
                     className="flex-1 resize-none text-xs md:text-sm text-[#0f172a] bg-transparent focus:outline-none placeholder-[#94a3b8] py-1 max-h-32 overflow-y-auto"
                   />
@@ -457,6 +696,24 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                     </svg>
                   </button>
                 </form>
+              </div>
+
+              {/* ── 3. 사장님 매장 등록 바로가기 배너 (대화창 아래쪽 배치 & 컬러 제거) ── */}
+              <div className="w-full max-w-xl bg-white border border-[#e2e8f0] rounded-2xl p-3.5 text-left flex items-center justify-between">
+                <div>
+                  <div className="text-xs font-bold text-[#0f172a]">
+                    🏪 사장님이신가요?
+                  </div>
+                  <p className="text-[11px] text-[#64748b] mt-0.5">
+                    간단한 대화로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleCardClick('owner_onboarding_guide', { start_owner_onboarding: true }, '🏪 사장님 매장 등록하기')}
+                  className="px-3 py-1.5 bg-[#f1f5f9] hover:bg-[#0f172a] text-[#0f172a] hover:text-white border border-[#cbd5e1] rounded-xl text-xs font-semibold transition shrink-0 active:scale-95 cursor-pointer"
+                >
+                  매장 등록하기 →
+                </button>
               </div>
             </div>
           ) : (
@@ -487,17 +744,20 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                         <span className="w-1.5 h-1.5 rounded-full bg-[#0f172a]" />
                         {m.cards.title}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        {m.cards.options.map((opt, idx) => (
-                          <button
-                            key={idx}
-                            onClick={() => handleSend(opt.label)}
-                            className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer"
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
+                      {m.cards.options && m.cards.options.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {m.cards.options.map((opt, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleCardClick(m.cards!.type, opt.value, opt.label)}
+                              disabled={isCardPending}
+                              className="px-3 py-2 text-xs font-medium text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer disabled:opacity-40"
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -524,7 +784,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                               <h3 className="text-sm font-bold text-[#0f172a]">{shop.name}</h3>
                             </div>
                             <span className="text-[10px] font-semibold px-2 py-0.5 bg-[#f1f5f9] text-[#475569] rounded-md">
-                              {shop.category === 'pet_grooming' ? '애견미용' : shop.category}
+                              {CATEGORY_LABEL_MAP[shop.category] || shop.category}
                             </span>
                           </div>
                           {shop.address && (
@@ -578,9 +838,14 @@ export default function ToboMainConsole({ user }: { user?: any }) {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* ── 하단 입력창 (대화가 시작되었을 때만 하단에 렌더링) ── */}
+        {/* ── 하단 입력창 — 카드/텍스트 경로 공용. 대화 시작 후 항상 노출 ── */}
         {messages.length > 0 && (
           <div className="p-3 md:p-6 max-w-3xl w-full mx-auto bg-[#f8fafc]">
+            {isCardPending && (
+              <div className="text-center mb-2">
+                <span className="text-[10px] text-teal-600 font-semibold animate-pulse">⚡ 카드 처리 중...</span>
+              </div>
+            )}
             <form
               onSubmit={e => {
                 e.preventDefault()
@@ -602,13 +867,13 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                   }
                 }}
                 rows={1}
-                placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
-                readOnly={isPending}
+                placeholder="카드를 클릭하거나 직접 입력하세요... (Shift+Enter 줄바꿈)"
+                readOnly={isPending || isCardPending}
                 className="flex-1 resize-none text-xs text-[#0f172a] bg-transparent focus:outline-none placeholder-[#94a3b8] py-1 max-h-32 overflow-y-auto"
               />
               <button
                 type="submit"
-                disabled={!input.trim() || isPending}
+                disabled={!input.trim() || isPending || isCardPending}
                 className="p-1.5 bg-[#0f172a] text-white rounded-xl hover:bg-[#1e293b] disabled:opacity-20 transition shrink-0"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -618,7 +883,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
             </form>
             <div className="text-center mt-2">
               <span className="text-[10px] text-[#64748b]">
-                toboai는 사용자의 대화 맥락을 임베딩하여 최적의 제휴 매장을 연결합니다.
+                버튼을 누르시면 빠르게 진행되며, 원하시는 내용을 직접 입력하셔도 돼요 😊
               </span>
             </div>
           </div>

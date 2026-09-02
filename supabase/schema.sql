@@ -132,3 +132,25 @@ GRANT ALL ON TABLE chat_rooms TO authenticated, service_role, anon;
 GRANT ALL ON TABLE chat_participants TO authenticated, service_role, anon;
 GRANT ALL ON TABLE chat_messages TO authenticated, service_role, anon;
 GRANT ALL ON TABLE reservations TO authenticated, service_role, anon;
+
+-- ================================================================
+-- 8. 토보 미지원 수요 트래킹 테이블 (Unmet Demands)
+-- ================================================================
+CREATE TABLE IF NOT EXISTS public.tobo_unmet_demands (
+  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id uuid REFERENCES public.accounts(id) ON DELETE SET NULL,
+  session_id uuid REFERENCES public.tobo_sessions(id) ON DELETE SET NULL,
+  keyword text NOT NULL,             -- 예: 펜션, 동물병원, 치킨 등
+  category_guess text,               -- 숙박, 의료, 외식 등 추정 분류
+  user_note text,                    -- 고객이 남긴 세부 희망 조건 (예: 경주, 다견 2마리 등)
+  notified boolean DEFAULT false,    -- 추후 서비스 오픈 시 알림 발송 여부
+  created_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.tobo_unmet_demands ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Public tobo_unmet_demands select" ON public.tobo_unmet_demands;
+DROP POLICY IF EXISTS "Public tobo_unmet_demands insert" ON public.tobo_unmet_demands;
+CREATE POLICY "Public tobo_unmet_demands select" ON public.tobo_unmet_demands FOR SELECT USING (true);
+CREATE POLICY "Public tobo_unmet_demands insert" ON public.tobo_unmet_demands FOR INSERT WITH CHECK (true);
+GRANT ALL ON TABLE public.tobo_unmet_demands TO authenticated, service_role, anon;
+

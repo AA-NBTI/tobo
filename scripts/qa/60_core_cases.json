@@ -1,0 +1,422 @@
+[
+  {
+    "id": "CASE-QA-001",
+    "vertical": "pet_grooming",
+    "scenario_type": "단순확정형",
+    "message": "내일 오후 3시에 푸들 전체 미용 예약하고 싶어요.",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-002",
+    "vertical": "pet_grooming",
+    "scenario_type": "순차응답형",
+    "message": "강아지 미용 예약 가능한 시간 알려주세요.",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-003",
+    "vertical": "pet_grooming",
+    "scenario_type": "애매표현형",
+    "message": "강아지 미용 예약하고 싶은데 그냥 이번 주 중에 아무 때나 가능한 시간으로 잡아주세요.",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-004",
+    "vertical": "pet_grooming",
+    "scenario_type": "잡담후전환형",
+    "message": "오늘 날씨가 너무 좋아서 강아지랑 산책 다녀왔는데 털이 너무 엉켰더라고요. 아, 맞다. 이번 주 토요일 오후에 미용 예약 가능할까요?",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-005",
+    "vertical": "pet_grooming",
+    "scenario_type": "중도변심형",
+    "message": "내일 오후 2시에 강아지 미용 예약하려고 했는데, 아 다시 생각해보니 4시가 더 편할 것 같아요. 4시로 예약 가능할까요?",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-006",
+    "vertical": "pet_grooming",
+    "scenario_type": "특이사항포함형",
+    "message": "안녕하세요, 포메라니안 미용 예약하고 싶은데요. 저희 강아지가 12살 노령견이라 체력이 많이 약하고, 특히 낯선 사람이 만지면 심하게 짖거나 무는 경향이 있어서 아주 조심스럽게 다뤄주셔야 해요. 그리고 피부가 매우 예민해서 인공 향료가 들어간 샴푸를 쓰면 바로 알러지 반응이 올라오거든요. 저자극 천연 샴푸로만 진행 가능한지, 그리고 시간이 오래 걸려도 괜찮으니 천천히 진행해주실 수 있는지 확인 부탁드립니다.",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-007",
+    "vertical": "pet_grooming",
+    "scenario_type": "미지원업종형",
+    "message": "강아지가 배변 훈련이 안 돼서 그런데 혹시 방문 훈련 예약할 수 있을까요?",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-008",
+    "vertical": "pet_grooming",
+    "scenario_type": "복합조건형",
+    "message": "이번 주 토요일 오후 2시에 30kg 넘는 리트리버 대형견 미용 가능한 곳 있을까요? 비용은 15만원 안쪽이었으면 좋겠어요.",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-009",
+    "vertical": "pet_grooming",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "아니, 지금 강아지 털이 너무 심하게 엉켜서 피부병 날 것 같은데 오늘 당장 예약 가능한 시간 없어요? 빨리 좀 확인해 주세요!",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-010",
+    "vertical": "pet_grooming",
+    "scenario_type": "오타/비문형",
+    "message": "낼3시미용예약되나여",
+    "expected_category": "pet_grooming"
+  },
+  {
+    "id": "CASE-QA-011",
+    "vertical": "clinic",
+    "scenario_type": "단순확정형",
+    "message": "내일 오후 3시에 말티즈 구름이 예방접종 예약하고 싶어요.",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-012",
+    "vertical": "clinic",
+    "scenario_type": "순차응답형",
+    "message": "강아지 예방접종 예약하고 싶어요.",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-013",
+    "vertical": "clinic",
+    "scenario_type": "애매표현형",
+    "message": "강아지가 좀 아픈 것 같은데 이번 주 중에 아무 때나 예약 가능한 병원 있을까요?",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-014",
+    "vertical": "clinic",
+    "scenario_type": "잡담후전환형",
+    "message": "오늘 날씨가 너무 좋아서 강아지랑 산책 나왔는데 기분이 정말 좋네요. 아, 그러고 보니 우리 애기 예방접종 시기가 다 된 것 같은데 이번 주 금요일 오후에 예약 가능할까요?",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-015",
+    "vertical": "clinic",
+    "scenario_type": "중도변심형",
+    "message": "내일 오후 2시로 예약하고 싶은데, 아 다시 생각해보니 4시가 나을 것 같아요. 강아지 예방접종 예약 가능한가요?",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-016",
+    "vertical": "clinic",
+    "scenario_type": "특이사항포함형",
+    "message": "안녕하세요, 15살 된 노령견 말티즈 진료 예약하고 싶어요. 애가 당뇨가 있어서 인슐린 주사를 맞고 있고 최근에 식욕이 많이 떨어졌거든요. 그리고 낯선 사람이 오거나 병원 환경에 굉장히 예민해서 공격성을 보일 때가 많으니, 최대한 조용한 시간대로 배정해주시고 진료실에 들어갈 때 주의가 필요할 것 같습니다.",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-017",
+    "vertical": "clinic",
+    "scenario_type": "미지원업종형",
+    "message": "강아지 무지개다리 건너서 장례식장 예약하려고 하는데 여기서 가능한가요?",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-018",
+    "vertical": "clinic",
+    "scenario_type": "복합조건형",
+    "message": "이번 주 토요일 오후 3시쯤에 30kg 넘는 대형견 피부 진료 예약하고 싶은데, 혹시 주차 가능하고 전문의 선생님 계신 곳인가요?",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-019",
+    "vertical": "clinic",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "아니, 우리 강아지가 갑자기 경련을 일으키는데 지금 당장 가면 바로 진료 받을 수 있는 거죠? 빨리 좀 알려달라고요!",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-020",
+    "vertical": "clinic",
+    "scenario_type": "오타/비문형",
+    "message": "낼3시병원예약대여",
+    "expected_category": "clinic"
+  },
+  {
+    "id": "CASE-QA-021",
+    "vertical": "pet_hotel",
+    "scenario_type": "단순확정형",
+    "message": "이번주 금요일 오후 3시에 강아지 한 마리 2박 3일 호텔 예약할게요.",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-022",
+    "vertical": "pet_hotel",
+    "scenario_type": "순차응답형",
+    "message": "강아지 호텔 예약하고 싶은데 가능한가요?",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-023",
+    "vertical": "pet_hotel",
+    "scenario_type": "애매표현형",
+    "message": "다음 주쯤에 저희 강아지 맡길 만한 가까운 호텔 아무 곳이나 예약해 주세요.",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-024",
+    "vertical": "pet_hotel",
+    "scenario_type": "잡담후전환형",
+    "message": "오늘 날씨가 너무 좋아서 산책 가기 딱이네요. 아 맞다, 다음 주에 출장 가야 하는데 강아지 호텔 예약 가능할까요?",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-025",
+    "vertical": "pet_hotel",
+    "scenario_type": "중도변심형",
+    "message": "내일 오후 2시에 강아지 호텔 맡기려고 하는데, 아 아니네요. 그냥 4시로 예약해 주세요.",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-026",
+    "vertical": "pet_hotel",
+    "scenario_type": "특이사항포함형",
+    "message": "다음 주 금요일부터 일요일까지 2박 3일로 호텔링 예약하고 싶은데요. 저희 강아지가 12살 노령견이라 관절이 안 좋아서 너무 딱딱한 바닥보다는 푹신한 곳이었으면 좋겠고, 매일 아침 8시에 챙겨줘야 하는 심장약이 있는데 이것도 관리가 가능할까요? 그리고 낯가림이 심해서 처음 보는 강아지들이랑 같이 있으면 스트레스를 많이 받는 편이라 가급적이면 독립된 공간에서 케어받았으면 좋겠습니다.",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-027",
+    "vertical": "pet_hotel",
+    "scenario_type": "미지원업종형",
+    "message": "강아지와 함께 투숙할 수 있는 일반 호텔 예약 가능한 곳 알려주세요.",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-028",
+    "vertical": "pet_hotel",
+    "scenario_type": "복합조건형",
+    "message": "다음주 금요일부터 일요일까지 골든 리트리버 대형견 한 마리 맡기려고 하는데, 야외 운동장이 있고 1박에 5만원 이하인 호텔 예약 가능한 곳 있을까요?",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-029",
+    "vertical": "pet_hotel",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "지금 당장 강아지 맡겨야 하는데 빈 방 있어요? 급해 죽겠으니까 빨리 좀 알려달라고요!",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-030",
+    "vertical": "pet_hotel",
+    "scenario_type": "오타/비문형",
+    "message": "낼호텔예약대요?",
+    "expected_category": "pet_hotel"
+  },
+  {
+    "id": "CASE-QA-031",
+    "vertical": "pet_dining",
+    "scenario_type": "단순확정형",
+    "message": "이번 주 토요일 오후 1시에 강아지 한 마리랑 같이 갈 건데 2인석 예약해 줘.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-032",
+    "vertical": "pet_dining",
+    "scenario_type": "순차응답형",
+    "message": "강아지랑 같이 갈 수 있는 식당 예약하고 싶어요.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-033",
+    "vertical": "pet_dining",
+    "scenario_type": "애매표현형",
+    "message": "이번 주말에 그냥 적당한 시간으로 강아지랑 갈 만한 근처 식당 좀 예약해줘.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-034",
+    "vertical": "pet_dining",
+    "scenario_type": "잡담후전환형",
+    "message": "요즘 날씨가 너무 좋아서 계속 산책만 하고 싶네요. 아, 그런데 생각난 김에 이번 주 토요일에 강아지랑 같이 갈 만한 식당 예약 좀 도와주실래요?",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-035",
+    "vertical": "pet_dining",
+    "scenario_type": "중도변심형",
+    "message": "내일 오후 1시에 강아지랑 같이 갈 식당 예약하고 싶은데, 아 다시 생각해보니 2시가 나을 것 같아요. 2시로 해주세요.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-036",
+    "vertical": "pet_dining",
+    "scenario_type": "특이사항포함형",
+    "message": "안녕하세요, 이번 주 토요일 저녁 6시에 예약하고 싶은데요. 저희 강아지가 닭고기 알러지가 심해서 메뉴 중에 닭고기가 들어간 건 절대 안 되고, 가능하면 연어 기반의 특식으로 준비해주실 수 있을까요? 그리고 성격이 조금 예민한 편이라 구석진 조용한 자리를 부탁드립니다.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-037",
+    "vertical": "pet_dining",
+    "scenario_type": "미지원업종형",
+    "message": "강아지 전용 수제 간식 정기 배송 서비스 신청하고 싶은데 어떻게 하나요?",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-038",
+    "vertical": "pet_dining",
+    "scenario_type": "복합조건형",
+    "message": "이번 주 토요일 오후 2시에 대형견 동반 가능한 강남 근처 펫 식당 예약하고 싶은데, 예산은 5만원 내외로 프라이빗 룸이 있는 곳으로 찾아줘.",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-039",
+    "vertical": "pet_dining",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "아니, 예약하고 도착했는데 왜 아직도 대기하라는 거예요? 강아지가 너무 힘들어서 헐떡거리는데 빨리 자리 안 내줄 거예요?",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-040",
+    "vertical": "pet_dining",
+    "scenario_type": "오타/비문형",
+    "message": "낼3시데강아지랑갈식당예약되요?",
+    "expected_category": "pet_dining"
+  },
+  {
+    "id": "CASE-QA-041",
+    "vertical": "pet_pension",
+    "scenario_type": "단순확정형",
+    "message": "이번주 토요일에 강아지 한 마리랑 묵을 수 있는 펫펜션 예약하고 싶어요.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-042",
+    "vertical": "pet_pension",
+    "scenario_type": "순차응답형",
+    "message": "강아지랑 같이 묵을 수 있는 펜션 예약 가능한가요?",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-043",
+    "vertical": "pet_pension",
+    "scenario_type": "애매표현형",
+    "message": "다음 주쯤에 강아지랑 갈만한 가까운 펫 펜션 아무 데나 예약하고 싶어요.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-044",
+    "vertical": "pet_pension",
+    "scenario_type": "잡담후전환형",
+    "message": "요즘 날씨가 갑자기 너무 추워졌네요. 아, 맞다! 이번 주말에 강아지랑 같이 쉴 만한 펫 펜션 예약하고 싶어요.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-045",
+    "vertical": "pet_pension",
+    "scenario_type": "중도변심형",
+    "message": "이번 주 토요일 오후 2시로 펜션 예약하려고 하는데, 아 다시 생각해보니 4시가 좋겠어요. 4시로 예약 가능한가요?",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-046",
+    "vertical": "pet_pension",
+    "scenario_type": "특이사항포함형",
+    "message": "다음 주말에 1박 예약하고 싶은데, 저희 강아지가 13살 노령견이라 관절이 많이 안 좋아서 계단이 없는 1층 독채 방으로 배정받을 수 있을까요? 그리고 심장약을 매일 정해진 시간에 먹여야 해서 관리자분이 도와주셔야 하는데 이게 가능하신지 확인 부탁드립니다.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-047",
+    "vertical": "pet_pension",
+    "scenario_type": "미지원업종형",
+    "message": "강아지랑 같이 갈 수 있는 펫 글램핑장 예약 가능한 곳 알려주세요.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-048",
+    "vertical": "pet_pension",
+    "scenario_type": "복합조건형",
+    "message": "11월 22일에 20만원 이하로 이용 가능한 대형견 입실 가능 독채 펜션 예약하고 싶어요.",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-049",
+    "vertical": "pet_pension",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "지금 당장 예약 취소해 주세요! 강아지가 갑자기 아파서 못 가게 됐는데 환불이 안 된다니 이게 말이 됩니까?",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-050",
+    "vertical": "pet_pension",
+    "scenario_type": "오타/비문형",
+    "message": "낼펜션예약돼나요",
+    "expected_category": "pet_pension"
+  },
+  {
+    "id": "CASE-QA-051",
+    "vertical": "pet_taxi",
+    "scenario_type": "단순확정형",
+    "message": "내일 오후 2시에 강남역에서 동물병원까지 가는 펫택시 예약해 주세요.",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-052",
+    "vertical": "pet_taxi",
+    "scenario_type": "순차응답형",
+    "message": "강아지랑 같이 타고 갈 펫택시 예약하고 싶어요.",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-053",
+    "vertical": "pet_taxi",
+    "scenario_type": "애매표현형",
+    "message": "내일 오후쯤에 적당히 편한 시간으로 펫택시 예약하고 싶어요.",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-054",
+    "vertical": "pet_taxi",
+    "scenario_type": "잡담후전환형",
+    "message": "오늘 날씨가 정말 좋네요! 기분 전환 겸 반려견이랑 외출하고 싶은데 마침 차를 쓸 수가 없어서요. 혹시 펫택시 예약 좀 할 수 있을까요?",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-055",
+    "vertical": "pet_taxi",
+    "scenario_type": "중도변심형",
+    "message": "내일 오후 2시에 펫택시 예약하고 싶은데요, 아 잠시만요. 생각해보니 4시가 더 편할 것 같아요. 4시로 해주세요.",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-056",
+    "vertical": "pet_taxi",
+    "scenario_type": "특이사항포함형",
+    "message": "안녕하세요, 저희 강아지가 15살 노령견이라 관절이 많이 안 좋아서 스스로 걷기가 거의 힘들거든요. 그리고 낯선 사람이나 환경에 예민해서 분리불안이 심한 편이라, 이동 중에 계속 안심시켜주실 수 있는 세심하고 친절한 기사님으로 예약하고 싶어요. 병원까지 안전하게 모셔다주실 수 있을까요?",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-057",
+    "vertical": "pet_taxi",
+    "scenario_type": "미지원업종형",
+    "message": "강아지와 함께 이용할 수 있는 렌터카를 빌리고 싶은데 예약 가능한가요?",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-058",
+    "vertical": "pet_taxi",
+    "scenario_type": "복합조건형",
+    "message": "이번 주 금요일 오후 2시에 강남에서 분당 동물병원까지 가려고 하는데, 30kg 넘는 골든 리트리버라 대형견 전용 차량으로 예약하고 싶고 비용은 5만원 이내였으면 좋겠어요.",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-059",
+    "vertical": "pet_taxi",
+    "scenario_type": "긴급/감정격앙형",
+    "message": "지금 강아지가 갑자기 경련을 일으켜서 급하게 병원에 가야 해요! 빨리 택시 좀 보내주세요, 제발 부탁드립니다!",
+    "expected_category": "pet_taxi"
+  },
+  {
+    "id": "CASE-QA-060",
+    "vertical": "pet_taxi",
+    "scenario_type": "오타/비문형",
+    "message": "낼오후2시쯤펫택시부러주세여",
+    "expected_category": "pet_taxi"
+  }
+]

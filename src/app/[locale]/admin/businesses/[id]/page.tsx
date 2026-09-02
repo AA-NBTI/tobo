@@ -5,6 +5,7 @@ import { getBusiness } from '../actions'
 import ServiceManagerClient from './ServiceManagerClient'
 import PromoTriggerButton from './PromoTriggerButton'
 import ReviewManagerClient from './ReviewManagerClient'
+import BusinessEditForm from './BusinessEditForm'
 
 import { setRequestLocale } from 'next-intl/server'
 
@@ -40,6 +41,9 @@ export default async function BusinessDetailPage({ params }: { params: Promise<{
           공개 페이지 보기 →
         </a>
       </div>
+
+      {/* 업체 기본 정보 수정 */}
+      <BusinessEditForm business={business} />
 
       {/* AI 홍보 피드 생성 */}
       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 rounded-xl p-5">

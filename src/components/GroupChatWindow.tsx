@@ -43,27 +43,28 @@ export default function GroupChatWindow({
   }
 
   const fetchMessagesAndParticipants = async () => {
-    // 1. 참여자 정보 가져오기
-    const { data: partData } = await supabase
-      .from('chat_participants')
-      .select('user_id, accounts(id, display_name, avatar_url, username, is_ai)')
-      .eq('room_id', room.id)
-
-    const pMap: any = {}
-    if (partData) {
-      partData.forEach((p: any) => {
-        pMap[p.user_id] = p.accounts
-      })
-      setParticipants(pMap)
-    }
-
-    // 2. 메시지 가져오기
+    // 1. 메시지 가져오기
     const { data: msgData } = await supabase
       .from('chat_messages')
       .select('*')
       .eq('room_id', room.id)
       .order('created_at', { ascending: true })
 
+    const senderIds = Array.from(new Set((msgData || []).map((m: any) => m.sender_id).filter(Boolean)))
+
+    // 2. 메시지 작성자 전수 프로필 조회
+    const { data: accountsData } = await supabase
+      .from('accounts')
+      .select('id, display_name, avatar_url, username, is_ai')
+      .in('id', senderIds.length > 0 ? senderIds : ['00000000-0000-0000-0000-000000000000'])
+
+    const pMap: Record<string, any> = {}
+    if (accountsData) {
+      accountsData.forEach((acc: any) => {
+        pMap[acc.id] = acc
+      })
+    }
+    setParticipants(pMap)
     if (msgData) setMessages(msgData)
 
     // 3. 읽음 처리
@@ -340,9 +341,9 @@ export default function GroupChatWindow({
               )}
               <div className="max-w-[75%] group">
                 {showAvatar && (
-                  <div className="text-xs text-gray-500 mb-1 ml-1 flex items-center gap-1">
-                    {sender?.display_name || '알 수 없음'}
-                    {sender?.is_ai && <span className="text-[9px] bg-purple-100 text-purple-700 px-1 py-0.5 rounded-full">AI</span>}
+                  <div className="text-xs font-bold text-gray-700 mb-1 ml-1 flex items-center gap-1.5">
+                    <span>{sender?.display_name || '로봇 AI'}</span>
+                    <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-bold">AI Bot</span>
                   </div>
                 )}
                 <div className={`flex items-end gap-1.5 ${isMine ? 'flex-row-reverse' : 'flex-row'}`}>

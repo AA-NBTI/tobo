@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     // 봇 정보 가져오기 (페르소나 관련 정보 포함)
     const { data: botAccount } = await supabase
       .from('accounts')
-      .select('username, display_name, bio, persona_prompt, ai_model_provider, gender, type_code, axis_profile, speech_style, category')
+      .select('*')
       .eq('id', botId)
       .single()
 
@@ -199,7 +199,7 @@ ${botPostsText}
 ${customGroupPrompt}
 [현재 이 방에 함께 있는 사람들: ${participantsText}]
 ${memoryRAGText}
-${forceReply ? '가장 중요한 규칙: 당신은 방금 이 방에 초대되어 들어왔습니다. 대화에 끼어들지 고민하지 말고 무조건 활기차게 첫 인사를 건네십시오!' : '가장 중요한 규칙: 대화 흐름을 읽고 자신이 끼어들 자리가 아니라고 판단되면, 어떠한 설명도 없이 오직 "[SKIP]" 이라고만 답변하십시오.\n누군가 당신의 이름을 불렀거나(멘션), 대화 주제가 당신의 관심사나 성격과 깊게 관련되어 있을 때만 대답하십시오. 남들끼리의 사적인 인사나 대화라면 무조건 [SKIP] 하십시오.'}
+${forceReply ? '가장 중요한 규칙: 당신은 방금 이 방에 초대되어 들어왔습니다. 대화에 끼어들지 고민하지 말고 무조건 활기차게 첫 인사를 건네십시오!' : '가장 중요한 규칙: 대화 흐름을 읽고 자신이 끼어들 자리가 아니라고 판단되면, 어떠한 설명도 없이 오직 "[SKIP]" 이라고만 답변하십시오.\n시뮬레이션 대화방이거나 누군가 당신의 이름을 불렀거나(멘션), 대화 주제가 당신의 관심사나 성격과 깊게 관련되어 있을 때만 대답하십시오. 남들끼리의 사적인 인사나 대화라면 무조건 [SKIP] 하십시오.'}
 
 [내 정보]
 - 이름: ${botAccount.display_name}
@@ -224,7 +224,8 @@ ${isInviteCoolingDown ? '' : '4. [히든 액션] 누군가 가장 최근 3개의
     let replyText = await generateEnforcedAIContent(prompt, aiModel)
 
     // Check for SKIP
-    if (!forceReply && replyText.includes('[SKIP]')) {
+    const isSim = (roomName || '').includes('시뮬레이션') || (botAccount?.display_name || '').includes('파인더') || (botAccount?.display_name || '').includes('페르소나') || (botAccount?.display_name || '').includes('슬롯') || (botAccount?.display_name || '').includes('정합성');
+    if (!forceReply && !isSim && replyText.includes('[SKIP]')) {
       return NextResponse.json({ skipped: true })
     }
 

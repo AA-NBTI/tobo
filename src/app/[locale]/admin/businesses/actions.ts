@@ -53,10 +53,21 @@ export async function createBusiness(form: FormData) {
   const description = form.get('description') as string
   const address = form.get('address') as string
   const phone = form.get('phone') as string
+  const region = (form.get('region') as string) || (address?.includes('하단') ? '하단동' : '사하구')
   const slug = name.toLowerCase().replace(/[^a-z0-9가-힣]/g, '-').replace(/-+/g, '-').slice(0, 40) + '-' + Date.now().toString(36)
 
   const { error } = await admin.from('businesses').insert({
-    name, category, description, address, phone, slug
+    name,
+    category,
+    description,
+    address,
+    phone,
+    region,
+    slug,
+    is_active: true,
+    onboarding_status: 'approved',
+    registration_verified: true,
+    registration_verified_at: new Date().toISOString()
   })
   if (error) throw new Error(error.message)
   revalidatePath('/ko/admin/businesses')
@@ -65,15 +76,35 @@ export async function createBusiness(form: FormData) {
 // 업체 수정
 export async function updateBusiness(id: string, form: FormData) {
   const admin = getAdmin()
-  const { error } = await admin.from('businesses').update({
-    name: form.get('name'),
-    category: form.get('category'),
-    description: form.get('description'),
-    address: form.get('address'),
-    phone: form.get('phone'),
-  }).eq('id', id)
+  const name = form.get('name') as string
+  const category = form.get('category') as string
+  const description = form.get('description') as string
+  const address = form.get('address') as string
+  const phone = form.get('phone') as string
+  const region = form.get('region') as string
+  const business_registration_number = form.get('business_registration_number') as string
+  const is_active_str = form.get('is_active')
+
+  const updatePayload: Record<string, any> = {
+    name,
+    category,
+    description,
+    address,
+    phone,
+  }
+
+  if (region !== null && region !== undefined) updatePayload.region = region
+  if (business_registration_number !== null && business_registration_number !== undefined) {
+    updatePayload.business_registration_number = business_registration_number
+  }
+  if (is_active_str !== null && is_active_str !== undefined) {
+    updatePayload.is_active = is_active_str === 'true' || is_active_str === 'on'
+  }
+
+  const { error } = await admin.from('businesses').update(updatePayload).eq('id', id)
   if (error) throw new Error(error.message)
   revalidatePath('/ko/admin/businesses')
+  revalidatePath(`/ko/admin/businesses/${id}`)
 }
 
 // 업체 삭제

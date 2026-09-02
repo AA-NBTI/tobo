@@ -16,7 +16,7 @@ export interface RealBusiness {
   is_active: boolean;
   slug: string;
   rating?: number;              // (추가) 전문성 점수용 (Schema에 아직 없으나 미래 확장을 위해)
-  is_emergency_24h?: boolean;   // (추가) 빠른진료/응급대응 점수용
+  expertise_rating?: number;    // (추가) 전문성 점수용
   match_score?: number;
   score_breakdown?: {
     category_score: number;
@@ -114,12 +114,7 @@ export function rankRealBusinesses(
       expertiseScore = ((b.name.length % 5 + 1) / 5.0) * 100; 
     }
 
-    let speedScore = 0;
-    if (b.is_emergency_24h !== undefined) {
-      speedScore = b.is_emergency_24h ? 100 : 0;
-    } else {
-      speedScore = (b.id.charCodeAt(0) % 2 === 0 ? 100 : 0);
-    }
+    let speedScore = b.is_active ? 80 : 0;
 
     // --- 최종 스코어 합산 ---
     const totalScore = Math.round(

@@ -234,7 +234,7 @@ export async function createAiBot(formData: FormData) {
 
   if (accountError) {
     console.error('createAiBot INSERT error:', accountError)
-    throw new Error('Failed to update AI account')
+    throw new Error(`DB 저장 실패 (1단계): ${accountError.message || accountError.code}`)
   }
 
   // ── 1.5단계: 봇 생성 즉시 페르소나 임베딩 자동 생성 ────

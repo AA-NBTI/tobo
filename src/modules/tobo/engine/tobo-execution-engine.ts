@@ -1,9 +1,9 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { generateEnforcedAIContent } from '../../../utils/ai-core';
-import { generateEmbedding } from '../../../utils/embedding';
-import { prepareLeadMaterial, LeadQuestionCard, selectBestCard, FunnelStage } from './lead-material-orchestrator';
+import { generateEnforcedAIContent, generateEmbedding } from '../../../utils/ai-core';
+import { prepareLeadMaterial, LeadQuestionCard, selectBestCard, FunnelStage, buildFilledSlots, mergeSlots } from './lead-material-orchestrator';
 import { rankRealBusinesses } from './matching-scorer';
 import { extractSlots } from './slot-extractor';
+import { HIDDEN_NEEDS_CATALOG } from './hidden_needs_catalog';
 
 export interface ToboExecutionResult {
   reply: string;
@@ -32,7 +32,8 @@ export async function executeToboResponse(
   message: string,
   history: any[] = [],
   step: number = 1,
-  userId?: string
+  userId: string = 'anonymous',
+  contextBusinessId?: string // 새 대화 진입 시 특정 업체 문맥이 있을 경우
 ): Promise<ToboExecutionResult> {
   const currentStep = Math.max(step, (history || []).length + 1);
 
@@ -53,6 +54,40 @@ export async function executeToboResponse(
 
   // 3. 통합 의도 및 슬롯 추출 엔진 호출 (NEW ARCHITECTURE)
   const intentData = await extractSlots(message, history, supabaseAdmin);
+  const { category, target_date, target_time, region_hint, force_reshow, party_size } = intentData.slots;
+
+  // [메모리 (재방문 손님) 조회 - category가 없거나 대화 극초기일 때]
+  let recalledMemoryText = '';
+  if (userId !== 'anonymous' && message) {
+    // bot_memories 테이블의 bot_id가 UUID 타입이므로 "tobo-" 접두사를 붙일 수 없습니다.
+    // 비즈니스 ID 자체를 사용하거나, 글로벌일 경우 00000000-0000-0000-0000-000000000000 사용
+    const memoryBotId = contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000';
+    try {
+      let query = supabaseAdmin.from('bot_memories')
+        .select('*')
+        .eq('bot_id', memoryBotId)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (category) {
+        query = query.ilike('content', `%[CAT:${category}]%`);
+      }
+
+      const { data: matchingMemories, error: selectErr } = await query.limit(1);
+      
+      if (selectErr) {
+        console.error(`❌ [Tobo Memory] DB 조회 실패:`, selectErr);
+      } else if (matchingMemories && matchingMemories.length > 0) {
+        // [CAT:...] 태그 제거 후 텍스트만 추출
+        const rawContent = matchingMemories[0].content;
+        const cleanContent = rawContent.replace(/ \[CAT:.*?\]/g, '').trim();
+        recalledMemoryText = cleanContent;
+        console.log(`✅ [Tobo Memory] 기억 불러오기 성공 (Exact Match): ${cleanContent}`);
+      }
+    } catch (e) {
+      console.warn("Memory retrieve failed", e);
+    }
+  }
 
   // 3-1. 하이브리드 벡터 검색 (RAG) - Cloudflare 임베딩 엔진 활용
   let businesses: any[] = [];
@@ -81,15 +116,13 @@ export async function executeToboResponse(
     let query = supabaseAdmin
       .from('businesses')
       .select('id, name, category, address, region, pet_size, price_range, is_active, slug')
-      .eq('is_active', true);
+      .eq('is_active', true)
+      .eq('onboarding_status', 'approved');  // SSOT §10 + api-spec 케이스 7: 미승인 업체 필터링
       
     if (intentData.slots.category && intentData.slots.category !== 'UNSUPPORTED') {
       query = query.eq('category', intentData.slots.category);
     }
-    if (intentData.slots.region_hint) {
-      query = query.like('region', `%${intentData.slots.region_hint}%`);
-    }
-    const { data: fallbackBusinesses } = await query.limit(5);
+    const { data: fallbackBusinesses } = await query.limit(10);
     businesses = fallbackBusinesses || [];
   }
 
@@ -98,6 +131,7 @@ export async function executeToboResponse(
     .join('\n');
 
   let leadCard: LeadQuestionCard | undefined = undefined;
+  let recommendationList: any[] = [];
   let actionDirective = '';
 
   const STAGE_COPY_GUIDE: Record<FunnelStage, string> = {
@@ -107,19 +141,45 @@ export async function executeToboResponse(
     [FunnelStage.CONFIRMATION]: "모든 조건이 확정됐다. 확신을 주는 톤으로 예약 확정을 안내하라.",
   };
 
-  if (intentData.conversation_type === 'OFF_TOPIC') {
+  if (intentData.conversation_type === 'OWNER_ONBOARDING') {
+    // [분기 0] 사장님 매장 등록 의도 감지
+    leadCard = prepareLeadMaterial('owner_onboarding_guide', null);
+    actionDirective = `[시스템 지시사항 - 사장님 매장 등록 안내]
+사용자가 매장/업체 등록이나 입점에 대해 문의하고 있습니다.
+화면에 "🏪 사장님 매장 등록 바로가기" 카드가 띄워졌으니, "사장님 환영합니다! 아래 매장 등록 버튼을 누르시면 전용 온보딩 창구에서 바로 등록하실 수 있어요."라고 친절하고 명확하게 1문장으로만 안내하세요.`;
+  } else if (intentData.conversation_type === 'OFF_TOPIC') {
     // [분기 1] 일반 대화/인사
     actionDirective = `[시스템 지시사항] 사용자가 예약이나 서비스 요청이 아닌 일반적인 대화(인사, 잡담 등)를 하고 있습니다. 서비스 제안이나 질문 없이, 맥락에 맞추어 유연하고 자연스럽게 스몰토크에 응답하고 공감해주세요.`;
   } else {
     // SERVICE_REQUEST: 다중 카드 및 퍼널 알고리즘 적용
-    const { category, target_date, target_time, region_hint } = intentData.slots;
+    const {
+      category,
+      target_date,
+      target_time,
+      region_hint,
+      pet_size,
+      style,
+      priority,
+      duration,
+      clinic_purpose,
+      business_id
+    } = intentData.slots;
     
-    // 채워진 슬롯 Set 생성
-    const filledSlots = new Set<string>();
-    if (category) filledSlots.add('category');
-    if (target_date) filledSlots.add('target_date');
-    if (target_time) filledSlots.add('target_time');
-    if (region_hint) filledSlots.add('region_hint');
+    // 🔒 공유 buildFilledSlots() 사용 — 직접 Set 구성 금지
+    const filledSlots = buildFilledSlots({
+      category,
+      region_hint,
+      pet_size,
+      style,
+      priority,
+      duration,
+      clinic_purpose,
+      target_date,
+      target_time,
+      business_id: business_id || contextBusinessId || null,
+    });
+
+    // ℹ️ detail_gathered는 buildFilledSlots() 내부의 computeDetailGathered()에서 자동 처리됨
 
     // 세션 상태 파싱 (루프 방지용)
     let lastShownCardType: string | null = null;
@@ -134,6 +194,10 @@ export async function executeToboResponse(
           lastShownCardType = 'category_select';
         } else if (content.includes('어느 지역의 매장을 찾으시나요?')) {
           lastShownCardType = 'region_select';
+        } else if (content.includes('반려동물의 체급을 알려주세요.')) {
+          lastShownCardType = 'pet_size_select';
+        } else if (content.includes('예약 시 가장 중요하게 생각하시는 부분은')) {
+          lastShownCardType = 'priority_select';
         } else if (content.includes('방문 원하시는 날짜를 선택해 주세요.')) {
           lastShownCardType = 'date_select';
         }
@@ -162,16 +226,77 @@ export async function executeToboResponse(
       // UI 카드 생성 (프론트에 전달될 데이터)
       leadCard = prepareLeadMaterial(cardType, category);
 
-      actionDirective = `
-[시스템 지시사항 - 매우 중요]
-현재 대화 퍼널 상태: ${FunnelStage[stage]}
-퍼널 가이드: ${stageCopy}
+      // 매장 추천 단계일 경우 매장 리스트 스코어링 & 전달
+      if (cardType === 'business_list') {
+        const priorityLabelMap: Record<string, string> = {
+          price: '가격',
+          distance: '거리',
+          rating: '전문성',
+          speed: '빠른진료'
+        };
+        recommendationList = rankRealBusinesses(businesses, {
+          target_category: (category && category !== 'UNSUPPORTED') ? category : 'pet_grooming',
+          preferred_region: region_hint || undefined,
+          pet_size: pet_size || undefined,
+          priority_select: priority ? (priorityLabelMap[priority] || priority) : undefined
+        });
+      }
 
-백엔드 시스템이 이미 화면에 [${cardType}] 카드를 띄웠습니다!
-당신은 절대로 긴 텍스트로 선택지를 나열하거나 변명하지 마세요. 특히 'Draft', 'Pet-customized' 등 당신의 내부 분석 과정이나 생각을 절대로 출력에 포함하지 마세요(CoT 누수 엄격히 금지). 오직 고객에게 건네는 최종 결과물인 1~2문장의 짧고 경쾌한 안내 멘트만 출력하세요.`;
+      // [메모리 저장 - 예약 확정 단계]
+      if (cardType === 'reservation_confirm' && userId !== 'anonymous') {
+        try {
+          const summaryPrompt = `다음 대화에서 고객이 언급한 알러지, 선호 스타일 등 '특이사항'만 1문장으로 요약하세요. 없으면 '없음' 출력.\n\n대화내역:\n${history.map(h=>h.content).join('\n')}\n${message}`;
+          const summary = (await generateEnforcedAIContent(summaryPrompt, 'gemma-4-31b-it')).trim();
+          if (summary && summary !== '없음') {
+            const memoryBotId = filledSlots.has('business_id') ? (business_id || contextBusinessId || '00000000-0000-0000-0000-000000000000') : (contextBusinessId ? contextBusinessId : '00000000-0000-0000-0000-000000000000');
+            
+            const savedContent = category ? `${summary} [CAT:${category}]` : summary;
+            const memEmbedding = await generateEmbedding(savedContent);
+            
+            const { error: insertErr } = await supabaseAdmin.from('bot_memories').insert({
+              bot_id: memoryBotId,
+              user_id: userId,
+              content: savedContent,
+              embedding: memEmbedding
+            });
+            if (insertErr) {
+              console.error(`❌ [Tobo Memory] DB 저장 실패:`, insertErr);
+            } else {
+              console.log(`✅ [Tobo Memory] 기억 저장 완료 (Exact Match 용): ${savedContent}`);
+            }
+          }
+        } catch (e) {
+          console.warn("Memory save failed", e);
+        }
+      }
+
+      const CARD_GUIDE_MAP: Record<string, string> = {
+        category_select: "고객에게 어떤 서비스를 찾으시는지 아래 보기에서 골라달라고 1문장으로 친절히 안내하세요.",
+        region_select: "고객에게 어느 지역의 매장을 찾으시는지 아래 보기에서 선택해달라고 1문장으로 안내하세요.",
+        pet_size_select: "고객에게 아이의 체급/크기를 선택해달라고 1문장으로 안내하세요. (절대 날짜나 시간을 먼저 묻지 마세요!)",
+        style_select: "고객에게 원하시는 미용 스타일을 선택해달라고 1문장으로 안내하세요.",
+        duration_select: "고객에게 숙박/돌봄 기간을 선택해달라고 1문장으로 안내하세요.",
+        clinic_purpose_select: "고객에게 병원 방문 목적을 선택해달라고 1문장으로 안내하세요.",
+        priority_select: "고객에게 예약 시 가장 중요하게 생각하시는 기준(가격, 거리, 평점, 속도 등)을 아래 보기에서 골라달라고 1문장으로 안내하세요.",
+        business_list: "고객의 조건에 딱 맞는 추천 매장 목록을 준비했다고 안내하며, 마음에 드는 매장을 선택해보시라고 1문장으로 안내하세요.",
+        date_select: "고객에게 방문을 희망하시는 날짜를 선택해달라고 1문장으로 안내하세요.",
+        time_slot: "고객에게 방문을 희망하시는 시간을 선택해달라고 1문장으로 안내하세요.",
+        reservation_confirm: "선택하신 예약 정보를 확인하시고 예약을 확정해달라고 1문장으로 안내하세요.",
+        unmet_notification: "아직 준비 중인 서비스임을 정중히 양해 구하고, 오픈 알림을 받아보실지 1문장으로 안내하세요."
+      };
+
+      actionDirective = `
+[응답 작성 지시사항 (필수 준수)]
+대화 퍼널 상태: ${FunnelStage[stage]}
+현재 화면에 표시된 질문 카드: [${cardType}]
+작성 가이드: ${CARD_GUIDE_MAP[cardType] || '화면의 카드를 선택하도록 1문장으로 친절히 안내하세요.'}
+
+⚠️ 주의: 카드의 선택지 내용을 텍스트로 중복 나열하지 마세요. 화면 카드 질문과 다른 엉뚱한 정보(날짜, 가격 등)를 미리 묻지 마세요!
+`;
     } else {
       actionDirective = `
-[시스템 지시사항 - 매우 중요]
+[절대 규칙: 단골손님 맞춤 응답]
+${recalledMemoryText ? `이 고객은 단골입니다. 이전 대화 기록: "${recalledMemoryText}"\n당신이 작성할 응답에 반드시 이 특이사항을 아는 척하며 챙겨주는 내용(예: "지난번 말씀하신 저자극 샴푸로 준비해드릴까요?")을 포함하세요! 이 규칙이 다른 모든 지시보다 최우선입니다.\n\n` : ''}[시스템 지시사항 - 매우 중요]
 현재 대화 퍼널 상태: ${FunnelStage[stage]}
 퍼널 가이드: ${stageCopy}
 
@@ -179,10 +304,35 @@ export async function executeToboResponse(
     }
   }
 
+  // 능동 제안(숨은 니즈) 주입
+  if (intentData.detected_hidden_needs && intentData.detected_hidden_needs.length > 0) {
+    const proactiveMessages = intentData.detected_hidden_needs
+      .map(code => HIDDEN_NEEDS_CATALOG[code]?.suggestion_message)
+      .filter(Boolean);
+    if (proactiveMessages.length > 0) {
+      const proactiveText = `\n\n[능동 제안(스니펫) 지시사항]\n사용자의 발화에서 숨은 니즈가 파악되었습니다. 답변 서두에 반드시 다음 텍스트를 자연스럽게 포함하여 먼저 짚어주세요:\n"${proactiveMessages.join(' ')}"`;
+      actionDirective += proactiveText;
+    }
+  }
+
+  // 재방문 단기기억 텍스트 주입 (SHOW_CARD가 아닐 때를 대비)
+  if (recalledMemoryText && !actionDirective.includes('단골손님 기억 활용')) {
+    actionDirective += `\n[🚨 단골손님 기억 활용 🚨]\n과거 기억: "${recalledMemoryText}"\n이 기억을 반드시 응답에 자연스럽게 녹여내세요.`;
+  }
+
   // 4. 이전 대화 기록 포맷팅
   const formattedHistory = (history || [])
     .map((h: any) => `${h.role === 'user' ? '고객' : '토보'}: ${h.content}`)
     .join('\n');
+
+  let userPrompt = `
+[대화내역]
+${formattedHistory}
+고객: ${message}
+
+${actionDirective}
+
+(토보의 답변):`;
 
   // 5. 실제 Gemma 31B 모델에게 완전한 대화 자율성을 부여하되, 행동은 actionDirective로 강력히 통제
   const prompt = `${systemPrompt}
@@ -190,17 +340,19 @@ export async function executeToboResponse(
 [현재 등록된 실존 제휴 매장 데이터베이스]:
 ${availableBusinessesSummary}
 
-[이전 대화 기록]:
-${formattedHistory}
+${userPrompt}`;
 
-[고객의 현재 메시지]: "${message}"
-
-${actionDirective} (토보의 답변):`;
 
   let aiReply = '';
   try {
-    const raw = await generateEnforcedAIContent(prompt, 'gemma-4-31b-it');
-    aiReply = raw.replace(/^["']|["']$/g, '').trim();
+    aiReply = await generateEnforcedAIContent(prompt, 'gemma-4-31b-it');
+    
+    // 🔥 5.1 프로그래밍 방식의 단골손님 기억 강제 결합 (LLM 프롬프트 대신 백엔드에서 100% 삽입)
+    if (recalledMemoryText) {
+      const memoryPrefix = `지난번처럼 ${recalledMemoryText} 신경써서 준비해드릴까요?\n`;
+      aiReply = memoryPrefix + aiReply;
+    }
+    
   } catch (e: any) {
     console.error('LLM Engine Error:', e);
     aiReply = '네, 보호자님! 현재 원하시는 지역 내 등록된 제휴 매장 중 적합한 일정을 확인해 드릴게요. 편하게 말씀해 주세요. (에러: ' + e.message + ')';
@@ -209,6 +361,7 @@ ${actionDirective} (토보의 답변):`;
   return {
     reply: aiReply,
     card: leadCard,
+    recommendationList,
     isUnmet: false,
     step: currentStep + 1
   };
