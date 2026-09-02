@@ -246,13 +246,45 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   async function handleCardClick(cardType: string, selectedValue: any, explicitLabel?: string) {
     if (isCardPending) return
 
-    // open_url 속성이 있는 경우(예: 사장님 등록 화면 바로가기) 즉시 해당 페이지로 이동
-    if (selectedValue?.open_url) {
+    // open_url 속성이 있는 경우(예: 사장님 등록 화면 바로가기)
+    // 페이지 이동 대신 현재 대화창에서 바로 사장님 등록 온보딩 시작
+    if (selectedValue?.open_url === '/ko/register' || selectedValue?.start_owner_onboarding) {
+      setMessages(prev => [
+        ...prev,
+        { id: Date.now().toString(), role: 'user', content: '🏪 사장님 매장 등록 시작하기' },
+      ])
+      setIsCardPending(true)
+      try {
+        const res = await fetch('/api/owner-onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 0, message: '', collected: {} }),
+        })
+        const data = await res.json()
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: data.reply,
+            cards: data.card,
+          }
+        ])
+      } catch (err) {
+        setMessages(prev => [
+          ...prev,
+          { id: Date.now().toString(), role: 'assistant', content: '사장님 온보딩 연결 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }
+        ])
+      } finally {
+        setIsCardPending(false)
+      }
+      return
+    } else if (selectedValue?.open_url) {
       window.location.href = selectedValue.open_url
       return
     }
 
-    // 다른 서비스 찾기 / UNSUPPORTED / back_to_home 클릭 시 수기 입력창으로 즉시 안내 및 포커스
+    // 다른 서비스 찾기 / UNSUPPORTED / back_to_home 클릭 시 수기 입력창으로 즉시 안내 및 확실한 포커스 보장
     if (
       selectedValue?.category === 'UNSUPPORTED' ||
       selectedValue?.back_to_home ||
@@ -268,9 +300,15 @@ export default function ToboMainConsole({ user }: { user?: any }) {
           content: '찾으시는 서비스나 매장 조건을 아래 입력창에 편하게 말씀해 주세요! ✍️ 토보가 맞춤으로 찾아드릴게요.',
         }
       ])
-      setTimeout(() => {
-        inputRef.current?.focus()
-      }, 100)
+      // 화면이 empty-state에서 active-chat으로 전환되는 타이밍을 완벽히 맞추기 위해 2단계 포커스
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (inputRef.current) {
+            inputRef.current.focus()
+            inputRef.current.select()
+          }
+        }, 50)
+      })
       return
     }
 
@@ -670,12 +708,12 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                     간단한 대화로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
                   </p>
                 </div>
-                <a
-                  href="/ko/register"
-                  className="px-3 py-1.5 bg-[#f1f5f9] hover:bg-[#0f172a] text-[#0f172a] hover:text-white border border-[#cbd5e1] rounded-xl text-xs font-semibold transition shrink-0 active:scale-95"
+                <button
+                  onClick={() => handleCardClick('owner_onboarding_guide', { start_owner_onboarding: true }, '🏪 사장님 매장 등록하기')}
+                  className="px-3 py-1.5 bg-[#f1f5f9] hover:bg-[#0f172a] text-[#0f172a] hover:text-white border border-[#cbd5e1] rounded-xl text-xs font-semibold transition shrink-0 active:scale-95 cursor-pointer"
                 >
                   매장 등록하기 →
-                </a>
+                </button>
               </div>
             </div>
           ) : (
