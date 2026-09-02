@@ -231,6 +231,18 @@ export function prepareLeadMaterial(cardType: string, category: string | null): 
     };
   }
 
+  if (cardType === 'owner_onboarding_guide') {
+    return {
+      type: 'owner_onboarding_guide',
+      cardId: 'OWNER_ONBOARDING_CARD',
+      title: '🏪 매장 등록을 시작할까요? 전용 상담 창구로 안내해 드릴게요!',
+      options: [
+        { label: '🚀 사장님 매장 등록 바로가기', value: { open_url: '/ko/register' } },
+        { label: '💬 손님용 예약 상담 계속하기', value: { category: 'pet_grooming' } }
+      ]
+    };
+  }
+
   return {
     type: 'unknown',
     cardId: 'UNKNOWN',

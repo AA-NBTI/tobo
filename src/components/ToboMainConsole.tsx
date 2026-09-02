@@ -211,6 +211,13 @@ export default function ToboMainConsole({ user }: { user?: any }) {
   // ─── [카드 클릭 경로] /api/tobo-card-action — Zero LLM, 즉시 반응 ───
   async function handleCardClick(cardType: string, selectedValue: any) {
     if (isCardPending) return
+
+    // open_url 속성이 있는 경우(예: 사장님 등록 화면 바로가기) 즉시 해당 페이지로 이동
+    if (selectedValue?.open_url) {
+      window.location.href = selectedValue.open_url
+      return
+    }
+
     setIsCardPending(true)
 
     // 선택 표시 — 사용자 버블
@@ -492,22 +499,95 @@ export default function ToboMainConsole({ user }: { user?: any }) {
         {/* 대화 타임라인 및 클로드 스타일 중앙 뷰 */}
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-8 space-y-6 max-w-3xl w-full mx-auto select-text flex flex-col">
           {messages.length === 0 ? (
-            /* 빈 화면 중앙 클로드 스타일 뷰 (타이틀 바로 아래 입력창 배치) */
-            <div className="my-auto flex flex-col items-center justify-center text-center space-y-5 px-4 w-full">
+            /* 빈 화면: 대화 시작 전 기본 선택 카드(빠른 예약 / 사장님 등록) 및 입력창 제시 */
+            <div className="my-auto flex flex-col items-center justify-center text-center space-y-6 px-4 w-full py-4">
               <div className="w-12 h-12 rounded-2xl bg-[#0f172a] text-white flex items-center justify-center font-bold text-xl shadow-xs">
                 T
               </div>
               <div className="space-y-1">
                 <h2 className="text-xl md:text-2xl font-bold text-[#0f172a] tracking-tight">
-                  예약을 도와드릴까요?
+                  원하시는 서비스를 선택해주세요
                 </h2>
                 <p className="text-xs md:text-sm text-[#64748b] max-w-md leading-relaxed">
-                  궁금한 점이나 찾으시는 로컬 매장, 예약에 대해 편하게 대화해 보세요.
+                  카드를 클릭하시면 AI 대기 없이 1초 안에 바로 예약이 진행됩니다.
                 </p>
               </div>
 
-              {/* 중앙 대화 입력창 (메시지 없을 때 클로드처럼 중앙에 밀착) */}
-              <div className="w-full max-w-xl mt-2">
+              {/* ── 1. 빠른 맞춤 예약 카드 (Zero-LLM 카드 클릭 경로) ── */}
+              <div className="w-full max-w-xl bg-white border border-[#e2e8f0] rounded-2xl p-4 shadow-xs space-y-3 text-left">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#0f172a] flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-teal-500" />
+                    ⚡ 빠른 맞춤 예약 (카테고리 선택)
+                  </span>
+                  <span className="text-[10px] text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full font-semibold">
+                    즉시 반응
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_grooming', label: '✂️ 미용/목욕' })}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>✂️</span> <span>미용/목욕</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'clinic', label: '🏥 동물병원' })}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏥</span> <span>동물병원</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_hotel', label: '🏨 호텔/유치원' })}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏨</span> <span>호텔/유치원</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_dining', label: '🍽️ 동반 식당/카페' })}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🍽️</span> <span>동반 식당</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'pet_pension', label: '🏕️ 동반 펜션' })}
+                    className="p-3 text-xs font-semibold text-left text-[#334155] bg-[#f8fafc] hover:bg-[#0f172a] hover:text-white border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>🏕️</span> <span>동반 펜션</span>
+                  </button>
+                  <button
+                    onClick={() => handleCardClick('category_select', { category: 'UNSUPPORTED', label: '💡 다른 서비스' })}
+                    className="p-3 text-xs font-semibold text-left text-[#64748b] bg-[#f8fafc] hover:bg-[#e2e8f0] border border-[#e2e8f0] rounded-xl transition active:scale-98 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>💡</span> <span>기타 서비스</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* ── 2. 사장님 매장 등록 바로가기 배너 ── */}
+              <div className="w-full max-w-xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 rounded-2xl p-4 shadow-xs text-left flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-900">
+                    <span>🏪 사장님이신가요?</span>
+                    <span className="text-[10px] bg-amber-200/80 text-amber-900 px-1.5 py-0.2 rounded-md font-semibold">SSOT §13</span>
+                  </div>
+                  <p className="text-[11px] text-amber-700 mt-0.5">
+                    토보 AI 온보딩으로 3분 만에 우리 매장을 등록하고 예약을 받아보세요.
+                  </p>
+                </div>
+                <a
+                  href="/ko/register"
+                  className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition shrink-0 shadow-xs active:scale-95"
+                >
+                  매장 등록하기 →
+                </a>
+              </div>
+
+              {/* ── 3. 자유 질문/상담 텍스트 입력창 ── */}
+              <div className="w-full max-w-xl mt-1">
+                <div className="text-[11px] font-semibold text-[#64748b] text-left mb-1.5 flex items-center gap-1">
+                  <span>💬 직접 상담/질문하기 (AI 자유 대화)</span>
+                </div>
                 <form
                   onSubmit={e => {
                     e.preventDefault()
@@ -529,7 +609,7 @@ export default function ToboMainConsole({ user }: { user?: any }) {
                       }
                     }}
                     rows={1}
-                    placeholder="메시지를 입력하세요... (Shift+Enter로 줄바꿈)"
+                    placeholder="원하시는 조건이나 궁금한 점을 자유롭게 입력하세요... (Shift+Enter 줄바꿈)"
                     readOnly={isPending}
                     className="flex-1 resize-none text-xs md:text-sm text-[#0f172a] bg-transparent focus:outline-none placeholder-[#94a3b8] py-1 max-h-32 overflow-y-auto"
                   />

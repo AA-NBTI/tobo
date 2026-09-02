@@ -141,7 +141,13 @@ export async function executeToboResponse(
     [FunnelStage.CONFIRMATION]: "모든 조건이 확정됐다. 확신을 주는 톤으로 예약 확정을 안내하라.",
   };
 
-  if (intentData.conversation_type === 'OFF_TOPIC') {
+  if (intentData.conversation_type === 'OWNER_ONBOARDING') {
+    // [분기 0] 사장님 매장 등록 의도 감지
+    leadCard = prepareLeadMaterial('owner_onboarding_guide', null);
+    actionDirective = `[시스템 지시사항 - 사장님 매장 등록 안내]
+사용자가 매장/업체 등록이나 입점에 대해 문의하고 있습니다.
+화면에 "🏪 사장님 매장 등록 바로가기" 카드가 띄워졌으니, "사장님 환영합니다! 아래 매장 등록 버튼을 누르시면 전용 온보딩 창구에서 바로 등록하실 수 있어요."라고 친절하고 명확하게 1문장으로만 안내하세요.`;
+  } else if (intentData.conversation_type === 'OFF_TOPIC') {
     // [분기 1] 일반 대화/인사
     actionDirective = `[시스템 지시사항] 사용자가 예약이나 서비스 요청이 아닌 일반적인 대화(인사, 잡담 등)를 하고 있습니다. 서비스 제안이나 질문 없이, 맥락에 맞추어 유연하고 자연스럽게 스몰토크에 응답하고 공감해주세요.`;
   } else {

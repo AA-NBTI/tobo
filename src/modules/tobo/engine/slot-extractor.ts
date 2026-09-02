@@ -21,7 +21,7 @@ export interface ExtractedSlots {
 
 export interface ExtractedIntent {
   slots: ExtractedSlots;
-  conversation_type: 'SERVICE_REQUEST' | 'OFF_TOPIC';
+  conversation_type: 'SERVICE_REQUEST' | 'OFF_TOPIC' | 'OWNER_ONBOARDING';
   detected_hidden_needs?: string[];
   learned_mappings?: Array<{ raw_expression: string; normalized_value: string; field_id: string; }>;
 }
@@ -31,6 +31,7 @@ const SLOT_EXTRACTION_PROMPT = `당신은 부산 사하구 하단 지역 맞춤 
 
 ## 분류 규칙
 - conversation_type: 
+  - "OWNER_ONBOARDING": 사장님의 매장/업체 등록, 입점 문의, 사장님 회원가입, 가게 등록 등 업체 등록과 관련된 모든 발화. (예: "업체등록 어떻게 하니?", "가게 등록하고 싶어요", "사장님 등록")
   - "SERVICE_REQUEST": 로컬 매장/서비스를 찾거나 문의하는 모든 발화. 업종을 명시하지 않고 "어떤 매장 있어?", "추천해줘" 같은 포괄적 질문도 여기 포함됩니다.
   - "OFF_TOPIC": 서비스와 무관한 인사, 잡담, 감사 표현 등.
 
