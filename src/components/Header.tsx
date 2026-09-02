@@ -11,8 +11,13 @@ export default async function Header() {
   const headersList = await headers()
   const pathname = headersList.get('x-pathname') || headersList.get('next-url') || ''
   
-  // 메인 챗 홈화면에서는 상단 헤더를 숨겨 클로드와 100% 동일한 풀스크린 뷰 제공
-  const isHomePage = pathname === '/' || pathname === '/ko' || pathname === '/en' || pathname === ''
+  // 메인 챗 홈화면 및 사장님 등록 화면에서는 상단 글로벌 헤더를 숨겨 100% 독립 콘솔 뷰 제공
+  const isFullScreenConsole =
+    pathname === '/' ||
+    pathname === '/ko' ||
+    pathname === '/en' ||
+    pathname === '' ||
+    pathname.endsWith('/register')
 
   const t = await getTranslations('Header');
   const supabase = await createClient()
@@ -28,7 +33,7 @@ export default async function Header() {
   const { data: settings } = await supabase.from('site_settings').select('logo_url').eq('id', 'global').single()
   const siteLogo = settings?.logo_url
 
-  if (isHomePage) {
+  if (isFullScreenConsole) {
     return (
       <>
         {user && profile && profile.is_onboarded === false && (
