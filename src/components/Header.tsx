@@ -17,6 +17,7 @@ export default async function Header() {
     pathname === '/ko' ||
     pathname === '/en' ||
     pathname === '' ||
+    pathname.includes('register') ||
     pathname.endsWith('/register')
 
   const t = await getTranslations('Header');
